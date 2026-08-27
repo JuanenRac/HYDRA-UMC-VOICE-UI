@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "ecosystem": "HYDRA-UMC",
+  "name": "HYDRA-UMC-VOICE-UI",
+  "version": "0.0.5",
+  "role": "service",
+  "stack": "python",
+  "technologies": [
+    "Python",
+    "Whisper (STT)",
+    "TTS"
+  ],
+  "deployment_target": "cm5",
+  "maturity": "functional",
+  "family": "Cognitive AI Node",
+  "parent": "HYDRA-UMC-COGNITIVE-NODE",
+  "build": "",
+  "notes": "Real v0 audio front-end (WAV loading + energy-gate voice activity detection, stdlib-only) and a real rule-based intent/entity parser over already-transcribed text. Neither is the real Whisper STT / neural TTS pipeline the README's roadmap describes - those need a real model dependency and are still future work (name says UI, role is closer to a voice service than a graphical UI).",
+  "native_version": {
+    "file": "pyproject.toml",
+    "pattern": "^version\\s*=\\s*\"(\\d+)\\.(\\d+)\\.(\\d+)\""
+  }
+}

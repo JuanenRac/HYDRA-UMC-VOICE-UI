@@ -1,0 +1,236 @@
+<p align="center">
+  <img src="images/HYDRA_UMC_BANNER.svg" alt="HYDRA-UMC-VOICE-UI banner" width="100%">
+</p>
+
+# 🎙️ HYDRA-UMC-VOICE-UI
+
+<p align="center"><a href="README.md">🇺🇸 English</a> | <a href="README_spa.md">🇪🇸 Español</a> | <a href="README_fra.md">🇫🇷 Français</a> | <a href="README_ita.md">🇮🇹 Italiano</a> | <a href="README_deu.md">🇩🇪 Deutsch</a> | <a href="README_zho.md">🇨🇳 简体中文</a> | 🇯🇵 <b>日本語</b></p>
+
+### 🔊 ローカルでハードウェアアクセラレーションされる音声-動作パイプライン
+
+<p align="left">
+  <img src="https://img.shields.io/badge/Licencia-GPL%203.0-blue.svg" alt="GPL 3.0">
+  <img src="https://img.shields.io/badge/STT-Whisper%20Local-FF6F00.svg" alt="STT">
+  <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Hailo-10">
+</p>
+
+---
+
+## 1. 🛠️ 技術概要
+
+**HYDRA-UMC-VOICE-UI** は、HYDRA-UMC エコシステムのローカル音声インタ
+ラクション層です。Hailo-10 NPU によって加速される高性能な STT（音声認識）
+と TTS（音声合成）のパイプラインを提供します。
+
+これにより、オペレーターはクラウド接続なしにロボットミッションを制御し、
+システムステータスを照会し、音声フィードバックを受け取ることができ、
+最大限のプライバシーとゼロレイテンシーを実現します。
+
+### 主な機能：
+* 🎧 **オーディオフロントエンド（v0）：** 標準ライブラリのみによる実際の WAV 読み込みと、エネルギー閾値による音声活動検出。*（実際の信号処理プリミティブとして実装済み——文字起こし自体ではありません。下記の「ビルドと実行」を参照）*
+* 🎙️ **エッジ STT：** ほぼ瞬時の音声書き起こしのための量子化された Whisper モデル。*（計画中——実際のモデル依存関係が必要です）*
+* 📢 **自然な TTS：** システムアラートとステータスレポート向けの高品質な音声合成。*（計画中）*
+* 🧠 **NLU パーサー（v0）：** 認識されたテキストからの、ルールベースによる実際の意図/エンティティ抽出。Semantic Planner に提供します。*（小さな実際のコマンド語彙に対する正規表現ルールとして実装済み——学習済み ML モデルではありません。下記の「ビルドと実行」を参照）*
+* 🛡️ **ノイズキャンセリング：** 高い環境ノイズを伴う産業環境向けに最適化。*（計画中）*
+* 👨‍👩‍👧 **認知 AI ノードの子プロジェクト：**
+  [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE) の下で 4 つの兄弟サービスの 1 つとして動作します（VLA-Engine、Semantic-Planner、Docs-QA と並んで）。独自のコピーを保持するのではなく、親プロジェクトの HydraOS イメージとモデルの重みを共有します。
+* 📦 **オドメーター式バージョン管理：** 実際のビルドのたびに
+  `pyproject.toml` 自身のバージョンが自動的に増加します
+  （`bump_version.py`）——手動でのバージョン編集は不要です。
+
+---
+
+## 2. 🔄 音声パイプラインフロー
+
+```mermaid
+flowchart LR
+    MIC["Microphone Input"] --> STT["Whisper STT (Hailo-10)"]
+    STT --> NLU["Semantic Intent Parser"]
+    NLU --> LOGIC["Cognitive Node Logic"]
+    LOGIC --> TTS["TTS Engine"]
+    TTS --> SPK["Speaker Output"]
+```
+
+---
+
+## 3. 🧱 アーキテクチャと設計上の決定
+
+本リポジトリは Cognitive AI Node ファミリーの**子プロジェクト**です——
+親プロジェクトである [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE) が共有の HydraOS イメージと量子化モデルの重みを保持し、本サービスを他の 3 つの兄弟プロジェクト（VLA-Engine、Semantic-Planner、Docs-QA）とともに `docker-compose.yml` に接続します：
+
+* **本子プロジェクトに独自のハードウェア/ファームウェア/`os/`/`models/` がない理由。** 親プロジェクトが既に保有する CM5 + Hailo-10 M.2 モジュール上で完全に動作します——モデルの重みと HydraOS イメージを 1 か所に集約することで、ファミリー全体で数 GB にも及ぶモデルの重みが 4 つの食い違ったコピーとして存在することを避けられます。
+* **`src/` レイアウトを採用した理由。** インストール可能なパッケージ（`hydra_umc_voice_ui`）をリポジトリルートのツール（`bump_version.py`）から分離し、エコシステム内の他のすべての Python プロジェクトで使用されているレイアウトと一致させるためです。
+* **エントリポイントが今日は身元/バージョン/役割のみを表示する理由。** これは足場（スキャフォールディング）段階です：実際のターゲット Python バージョン上で、本パッケージが正しくインストール・コンパイルされ、問題なくインポートできることを証明することが、後で実際の STT/TTS パイプラインロジックを追加するための前提条件であり、その後の作業をパッケージングの懸念から切り離しておきます。
+* **エコシステムの他の部分との関係。** 本サービスは、Cognitive AI Node 全体へのハンズフリーなエントリポイントです：認識された意図は兄弟プロジェクトである HYDRA-UMC-SEMANTIC-PLANNER に流れ、HYDRA-UMC-STUDIO や HYDRA-UMC-DSI と並んで音声制御インターフェースとして機能します。
+* **`audio.py` が numpy ではなく `wave`/`array` を使う理由。** 16 ビット PCM のデコードと実際のエネルギー閾値 VAD は、標準ライブラリがすでに提供するもの以外何も必要としません——v0 を依存関係なしに保つことで、実際のオーディオフロントエンドは、Hailo-10 固有の STT 依存関係がインストールされる前でも、Python が動くあらゆる場所で動作します。
+* **`intent.py` が学習済み NLU モデルではなく実際の正規表現ルールである理由。** 小さな実際のコマンド語彙（start/stop/status/go home）は、今日ルールによって完全かつ正直にカバーされています——これは兄弟プロジェクトである HYDRA-UMC-DOCS-QA が埋め込みモデルではなく実際の TF-IDF インデックスを使う理由と同じです：認識された音声がこの v0 語彙以上をカバーする必要が出てきたときに、将来 ML ベースの分類器が同じ `parse_intent()` 契約の背後で置き換えられる、実際に機能するテスト可能なカーネルを今持っているということです。
+* **一致しないオーディオ/テキストが推測ではなく正直な失敗を返す理由。** `detect_voice_segments()` は無音に対して空リストを返し、`parse_intent()` はルールセット外のテキストに対して `None` を返します——v0 にはフォールバックモデルがないため、実際には検出していないセグメントや意図を捏造することは決してありません。
+
+---
+
+## 📂 リポジトリ構成
+
+```text
+HYDRA-UMC-VOICE-UI/
+├── src/hydra_umc_voice_ui/
+│   ├── audio.py               # 実際の WAV 読み込み + エネルギーによる音声活動検出
+│   ├── intent.py               # 実際のルールベース意図/エンティティパーサー
+│   └── main.py                  # エントリポイント + 実際の `analyze-audio`/`parse-intent` サブコマンド
+├── tests/                    # 実際のテスト：WAV フィクスチャ、VAD、意図ルール、エンドツーエンド CLI
+├── docs/                     # ドキュメントとコマンドカタログ
+├── images/                   # メディアと図表
+├── scripts/                  # ユーティリティスクリプト
+├── build/                    # ローカルビルド出力（git 管理外）
+├── pyproject.toml            # パッケージメタデータ（バージョン 0.0.5、オドメーター式増加）
+├── bump_version.py           # オドメーター式バージョンインクリメント（build.sh/.bat が使用）
+├── build.sh / build.bat      # venv 作成、インストール（dev エクストラ付き）、インポート検証、テスト実行
+└── run.sh / run.bat          # エントリポイントを実行（引数を転送、例：`analyze-audio`）
+```
+
+> **注：** `hardware/` と `firmware/` は省略されています——本ノードは
+> 既存の CM5 + Hailo-10 M.2 モジュール上で動作し、独自のハードウェア/
+> ファームウェア設計を持ちません。`os/` と `models/` も省略されています
+> ——HydraOS イメージと共有される Hailo-10 モデルの重みは、親プロジェクト
+> `HYDRA-UMC-COGNITIVE-NODE` に存在し、本プロジェクトはサービスとして
+> それに接続します（その `docker-compose.yml` を参照）。
+
+---
+
+## ⚙️ ビルドと実行
+
+Python >= 3.10 が必要です。
+
+```bash
+# Linux / macOS / Git Bash
+./build.sh   # .venv を作成し、パッケージを（editable モードで）インストールし、インポートを検証します
+./run.sh     # エントリポイントを実行します
+
+# Windows (cmd)
+build.bat
+run.bat
+```
+
+`build.sh`/`build.bat` は、実際の各ビルドの前にバージョンを増加させ
+（オドメーター方式、`bump_version.py` を参照）、実際のテストスイートを
+実行します（`pytest tests/`）。引数なしの `run.sh` の予期される出力：
+
+```text
+HYDRA-UMC-VOICE-UI v0.0.5
+Voice UI (Hailo-10) - local STT/TTS pipeline for hands-free robotic mission control.
+```
+
+実際のサブコマンドは、WAV ファイルを分析するか、すでに文字起こしされた
+テキストを処理します：
+
+```bash
+./run.sh analyze-audio recordings/command.wav
+./run.sh parse-intent "start mission alpha"
+
+# Windows
+run.bat analyze-audio recordings\command.wav
+run.bat parse-intent "status of robot 3"
+```
+
+### 🩺 トラブルシューティング
+
+* **`python: command not found` / ビルドがステップ 1 で失敗する。** `PATH` 上に Python >= 3.10 が必要です。Windows では [python.org](https://python.org) からインストールし、セットアップ中に「Add to PATH」がチェックされていることを確認してください。Linux/macOS では通常 `python3` という名前が使われます。
+* **`build.sh` が venv をアクティブ化できない。** `python3 -m venv .venv` は、プラットフォームごとに異なる場所にアクティベートスクリプトを配置します：Linux/macOS では `.venv/bin/activate`、Windows（Git Bash から使用される Windows Python venv でも同様）では `.venv/Scripts/activate`。`build.sh` は既に両方のパスをチェックしています——それでも失敗する場合は、`.venv/` を削除して `./build.sh` を再実行し、ゼロから再構築してください。
+* **`pip install -e .` が失敗する。** 通常は `.venv/` が古くなっていることが原因です。`.venv/` フォルダを削除して `./build.sh`/`build.bat` を再実行し、再作成してください。
+* **`import OK` が一度も表示されない。** `python -c "import hydra_umc_voice_ui"` 自体が失敗したことを意味します——venv がアクティブな状態で再実行し、実際のトレースバックを確認してください。
+
+---
+
+## 🚀 ロードマップ
+* **フェーズ 1：** Hailo-10 上での VLA エンジンのデプロイとマルチモーダル入力処理。
+* **フェーズ 2：** 意味プランナーと群行動モデルおよび長期記憶の統合。
+* **フェーズ 3：** 音声 UI の低遅延ローカル実行と産業用ノイズキャンセリング。
+* **フェーズ 4：** 多言語サポート（英語、スペイン語、ドイツ語、フランス語）と Dashboard AI との完全統合。
+
+---
+
+## 🔗 関連プロジェクト
+
+本プロジェクトは、同一著者（JuanenRac / Electro Hobby 3D）による、
+ファームウェア、制御ソフトウェア、AI ノード、フリート管理ツールにまたがる、
+より大きなロボティクスエコシステムの一部です。
+
+### 本サービスに直接関連
+
+- **[HYDRA-UMC-STUDIO](https://github.com/JuanenRac/HYDRA-UMC-STUDIO)** / **[HYDRA-UMC-DSI](https://github.com/JuanenRac/HYDRA-UMC-DSI)** —— エコシステム内の他の音声制御インターフェース。
+
+### エコシステムのその他のプロジェクト
+
+**HYDRA-UMC プラットフォーム** — マルチロボット・マイクロファクトリーセル
+- **[HYDRA-UMC](https://github.com/JuanenRac/HYDRA-UMC)** — マザーボード本体：Raspberry Pi CM5 ホスト + デュアルコア STM32H745 リアルタイムコプロセッサ、CAN-OTA/SPI-OTA 経由で最大 8 台の分散ロボットアームを統括。
+- **[HYDRA-UMC SERVER](https://github.com/JuanenRac/HYDRA-UMC-SERVER)** — ロボットの状態を保持するヘッドレス Express/WebSocket バックエンド。
+- **[HYDRA-UMC-ANDROID-CONTROL](https://github.com/JuanenRac/HYDRA-UMC-ANDROID-CONTROL)** — HYDRA-UMC 向け Android 制御アプリ。
+- **[HYDRA-UMC-IOS-CONTROL](https://github.com/JuanenRac/HYDRA-UMC-IOS-CONTROL)** — HYDRA-UMC 向け iOS/iPadOS 制御アプリ。
+- **[HYDRA-UMC-SUITE](https://github.com/JuanenRac/HYDRA-UMC-SUITE)** — デスクトップ版群制御コマンドセンター。
+- **[HYDRA-UMC-EDITOR-URDF](https://github.com/JuanenRac/HYDRA-UMC-EDITOR-URDF)** — デスクトップ版グラフィカル URDF 作成/編集ツール。
+
+**URTC プラットフォーム** — すべての HYDRA-UMC ロボットアームが搭載するツールヘッドコントローラー
+- **[URTC](https://github.com/JuanenRac/URTC)** — Universal Robot Tool Controller、ファームウェア。
+- **[URTC Flasher](https://github.com/JuanenRac/URTC-FLASHER)** — デスクトップ版 CAN-OTA + SWD/JTAG フラッシュツール。
+- **[URTC Tester](https://github.com/JuanenRac/URTC-TESTER)** — デスクトップ版ライブ CAN バス診断ツール。
+- **[URTC Web Studio](https://github.com/JuanenRac/URTC-WEB-STUDIO)** — 上記 2 つのデスクトップツールのブラウザベースの代替版。
+
+**👁️ ビジョン AI ノード（Hailo-8）**
+- [HYDRA-UMC-VISION-NODE](https://github.com/JuanenRac/HYDRA-UMC-VISION-NODE)
+- [HYDRA-UMC-VISION-STREAMER](https://github.com/JuanenRac/HYDRA-UMC-VISION-STREAMER)
+- [HYDRA-UMC-DETECTION-HEF](https://github.com/JuanenRac/HYDRA-UMC-DETECTION-HEF)
+- [HYDRA-UMC-SAFETY-ZONES](https://github.com/JuanenRac/HYDRA-UMC-SAFETY-ZONES)
+- [HYDRA-UMC-VISUAL-SERVOING-API](https://github.com/JuanenRac/HYDRA-UMC-VISUAL-SERVOING-API)
+
+**🐝 オーケストレーションと群制御**
+- [HYDRA-UMC-ORCHESTRATOR](https://github.com/JuanenRac/HYDRA-UMC-ORCHESTRATOR)
+- [HYDRA-UMC-SWARM-SYNC](https://github.com/JuanenRac/HYDRA-UMC-SWARM-SYNC)
+- [HYDRA-UMC-PATH-PLANNER-3D](https://github.com/JuanenRac/HYDRA-UMC-PATH-PLANNER-3D)
+- [HYDRA-UMC-JOB-DISPATCHER](https://github.com/JuanenRac/HYDRA-UMC-JOB-DISPATCHER)
+- [HYDRA-UMC-NODE-HEALING](https://github.com/JuanenRac/HYDRA-UMC-NODE-HEALING)
+
+**🎮 デジタルツインとシミュレーション**
+- [HYDRA-UMC-TWIN](https://github.com/JuanenRac/HYDRA-UMC-TWIN)
+- [HYDRA-UMC-PHYSICS-REPLICA](https://github.com/JuanenRac/HYDRA-UMC-PHYSICS-REPLICA)
+- [HYDRA-UMC-HIL-BRIDGE](https://github.com/JuanenRac/HYDRA-UMC-HIL-BRIDGE)
+- [HYDRA-UMC-SYNTHETIC-DATA-GEN](https://github.com/JuanenRac/HYDRA-UMC-SYNTHETIC-DATA-GEN)
+
+**📊 データと分析**
+- [HYDRA-UMC-DATALAKE](https://github.com/JuanenRac/HYDRA-UMC-DATALAKE)
+- [HYDRA-UMC-TELEMETRY-COLLECTOR](https://github.com/JuanenRac/HYDRA-UMC-TELEMETRY-COLLECTOR)
+- [HYDRA-UMC-ANOMALY-DETECTOR](https://github.com/JuanenRac/HYDRA-UMC-ANOMALY-DETECTOR)
+- [HYDRA-UMC-PRODUCTION-REPORTS](https://github.com/JuanenRac/HYDRA-UMC-PRODUCTION-REPORTS)
+
+**🏭 産業用ゲートウェイ**
+- [HYDRA-UMC-GATEWAY-INDUSTRIAL](https://github.com/JuanenRac/HYDRA-UMC-GATEWAY-INDUSTRIAL)
+- [HYDRA-UMC-OPCUA-SERVER](https://github.com/JuanenRac/HYDRA-UMC-OPCUA-SERVER)
+- [HYDRA-UMC-MQTT-BROKER](https://github.com/JuanenRac/HYDRA-UMC-MQTT-BROKER)
+- [HYDRA-UMC-MTCONNECT-ADAPTER](https://github.com/JuanenRac/HYDRA-UMC-MTCONNECT-ADAPTER)
+
+**🛠️ 補完ツール**
+- [URTC-SMART-RACK](https://github.com/JuanenRac/URTC-SMART-RACK)
+- [URTC-VISION-TOOL](https://github.com/JuanenRac/URTC-VISION-TOOL)
+- [HYDRA-UMC-WATCH](https://github.com/JuanenRac/HYDRA-UMC-WATCH)
+- [HYDRA-UMC-TOOL-CLI](https://github.com/JuanenRac/HYDRA-UMC-TOOL-CLI)
+- [HYDRA-UMC-DASHBOARD-AI](https://github.com/JuanenRac/HYDRA-UMC-DASHBOARD-AI)
+
+---
+
+## 👤 作者
+**JuanenRac**（Electro Hobby 3D）
+📧 electrohobby3d@gmail.com
+
+## 📜 ライセンス
+GPL-3.0 —— 詳細は LICENSE を参照してください。
+
+## 関連プロジェクト
+
+> Canonical public ecosystem relationship map.
+
+**Direct integrations:**
+[HYDRA-UMC-OS](https://github.com/JuanenRac/HYDRA-UMC-OS) · [HYDRA-UMC-SDK](https://github.com/JuanenRac/HYDRA-UMC-SDK) · [HYDRA-UMC-SERVER](https://github.com/JuanenRac/HYDRA-UMC-SERVER) · [URTC](https://github.com/JuanenRac/URTC) · [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE) · [HYDRA-UMC-VLA-ENGINE](https://github.com/JuanenRac/HYDRA-UMC-VLA-ENGINE) · [HYDRA-UMC-SEMANTIC-PLANNER](https://github.com/JuanenRac/HYDRA-UMC-SEMANTIC-PLANNER) · [HYDRA-UMC-PATH-PLANNER-3D](https://github.com/JuanenRac/HYDRA-UMC-PATH-PLANNER-3D)
+
+**Platform and contracts:**
+[HYDRA-UMC-OS](https://github.com/JuanenRac/HYDRA-UMC-OS) · [HYDRA-UMC-SDK](https://github.com/JuanenRac/HYDRA-UMC-SDK)
+
+**Rest of the ecosystem:**
+All remaining public repositories are grouped by the seven ecosystem layers in the [JuanenRac ecosystem dashboard](https://juanenrac.github.io/JuanenRac/).

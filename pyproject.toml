@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hydra-umc-voice-ui"
+version = "0.0.5"
+description = "Local hardware-accelerated Speech-to-Action pipeline (STT/TTS) for hands-free robotic mission control on Hailo-10."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE.md" }
+authors = [
+    { name = "JuanenRac (Electro Hobby 3D)", email = "electrohobby3d@gmail.com" },
+]
+keywords = ["hydra-umc", "hailo-10", "stt", "tts", "voice", "edge-ai"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.urls]
+Homepage = "https://github.com/JuanenRac/HYDRA-UMC-VOICE-UI"
+
+[project.scripts]
+hydra-umc-voice-ui = "hydra_umc_voice_ui.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
