@@ -191,6 +191,14 @@ run.bat parse-intent "status of robot 3"
 
 ---
 
+## 🎙️ PASSERELLE VOCALE POUR WATCH (v0)
+
+`python -m hydra_umc_voice_ui.main serve` expose une passerelle HTTP locale volontairement limitée pour une intégration appairée avec HYDRA-UMC-WATCH : `GET /health` et `POST /v1/voice/turn`. Elle valide le message typé `voice_turn`, utilise l'analyseur d'intentions déterministe existant et renvoie `assistant_reply` ; elle ne contrôle aucun matériel robotique.
+
+Le développement en loopback peut fonctionner sans jeton. Une écoute hors loopback exige `HYDRA_UMC_VOICE_UI_TOKEN` et un en-tête `Authorization: Bearer` correspondant. Cette API ne transporte jamais d'audio brut et les intentions liées au mouvement renvoient toujours `requiresConfirmation: true`.
+
+Consultez [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) pour le contrat de requête et la limite de déploiement.
+
 ## 🚀 ROADMAP
 * **Phase 1 :** Déploiement du moteur VLA et traitement des entrées multimodales sur Hailo-10.
 * **Phase 2 :** Intégration du planificateur sémantique avec des modèles de comportement en essaim et une mémoire à long terme.

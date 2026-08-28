@@ -135,6 +135,14 @@ run.bat parse-intent "status of robot 3"
 
 ---
 
+## 🎙️ WATCH 语音网关（v0）
+
+`python -m hydra_umc_voice_ui.main serve` 为已配对的 HYDRA-UMC-WATCH 集成提供有意限制的本地 HTTP 网关：`GET /health` 和 `POST /v1/voice/turn`。网关会验证类型化的 `voice_turn` 负载，使用现有的确定性意图解析器并返回 `assistant_reply`；它不控制机器人硬件。
+
+回环开发可在无令牌的情况下运行。非回环绑定要求 `HYDRA_UMC_VOICE_UI_TOKEN` 以及匹配的 `Authorization: Bearer` 标头。该 API 绝不传输原始音频，且与运动相关的意图始终返回 `requiresConfirmation: true`。
+
+请求协议和部署边界请参阅 [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md)。
+
 ## 🚀 路线图
 * **第一阶段：** 在 Hailo-10 上部署 VLA 引擎并进行多模态输入处理。
 * **第二阶段：** 语义规划器与集群行为模型及长期记忆的集成。

@@ -21,6 +21,7 @@ from pathlib import Path
 
 from . import __version__
 from .audio import detect_voice_segments, load_wav, rms_energy
+from .http_service import create_voice_gateway
 from .intent import parse_intent
 
 PROJECT_NAME = "HYDRA-UMC-VOICE-UI"
@@ -72,6 +73,23 @@ def _run_parse_intent(text: str) -> int:
     return 0
 
 
+def _run_serve(host: str, port: int) -> int:
+    try:
+        gateway = create_voice_gateway(host, port)
+    except ValueError as error:
+        print(f"ERROR: {error}")
+        return 1
+    print(f"{PROJECT_NAME} voice gateway listening on http://{host}:{port}")
+    print("POST /v1/voice/turn accepts bounded text only; it never actuates robots.")
+    try:
+        gateway.serve_forever()
+    except KeyboardInterrupt:
+        print("Voice gateway stopped.")
+    finally:
+        gateway.server_close()
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="hydra-umc-voice-ui", description=ROLE)
     subparsers = parser.add_subparsers(dest="command")
@@ -85,6 +103,11 @@ def build_parser() -> argparse.ArgumentParser:
         "parse-intent", help="Real rule-based intent/entity parsing over transcribed text."
     )
     intent_parser.add_argument("text", help="Already-transcribed text to parse.")
+
+    serve_parser = subparsers.add_parser(
+        "serve", help="Run the local authenticated Watch voice-turn gateway.")
+    serve_parser.add_argument("--host", default="127.0.0.1", help="Bind host (non-loopback requires HYDRA_UMC_VOICE_UI_TOKEN).")
+    serve_parser.add_argument("--port", type=int, default=8090, help="Bind TCP port (default: 8090).")
 
     return parser
 
@@ -104,6 +127,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_analyze_audio(args.wav_file)
     if args.command == "parse-intent":
         return _run_parse_intent(args.text)
+    if args.command == "serve":
+        return _run_serve(args.host, args.port)
 
     _print_identity()
     return 0

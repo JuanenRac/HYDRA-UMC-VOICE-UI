@@ -5,6 +5,22 @@ version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
 bumped manually only. See `bump_version.py`.
 
+## [Unreleased]
+### Added
+- `systemd/hydra-umc-voice-ui.service` and `deploy/voice-ui.env.example` - a
+  loopback-only CM5 service boundary. HYDRA-UMC-SERVER owns the matching token
+  and is the only production caller; the gateway still receives recognised
+  text only and never actuates a robot.
+- `gateway.py` - bounded `voice_turn` validation and a deterministic,
+  non-actuating policy that translates the existing intent parser output into
+  Watch-compatible `assistant_reply` messages. Motion-related requests are
+  explicitly marked `requiresConfirmation`; no request controls a robot.
+- `http_service.py` and `serve` - a stdlib HTTP gateway with `GET /health`
+  and authenticated `POST /v1/voice/turn`. Binding beyond localhost refuses
+  to start unless `HYDRA_UMC_VOICE_UI_TOKEN` is provided.
+- `docs/WATCH_VOICE_GATEWAY.md` and gateway contract tests, including a real
+  local HTTP request that proves an absent Bearer token is rejected.
+
 ## [0.0.5] - Real v0 audio front-end + rule-based intent parsing
 ### Added
 - `audio.py` - real, stdlib-only 16-bit PCM WAV loading (`wave` + `array`,

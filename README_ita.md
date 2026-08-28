@@ -191,6 +191,14 @@ run.bat parse-intent "status of robot 3"
 
 ---
 
+## 🎙️ GATEWAY VOCALE PER WATCH (v0)
+
+`python -m hydra_umc_voice_ui.main serve` espone un gateway HTTP locale e volutamente limitato per un'integrazione associata con HYDRA-UMC-WATCH: `GET /health` e `POST /v1/voice/turn`. Il gateway convalida il payload tipizzato `voice_turn`, usa l'analizzatore di intenti deterministico esistente e restituisce `assistant_reply`; non controlla hardware del robot.
+
+Lo sviluppo in loopback può essere eseguito senza token. Un bind non-loopback richiede `HYDRA_UMC_VOICE_UI_TOKEN` e un'intestazione `Authorization: Bearer` corrispondente. Questa API non invia mai audio grezzo e gli intenti relativi al movimento restituiscono sempre `requiresConfirmation: true`.
+
+Vedere [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) per il contratto della richiesta e il limite di distribuzione.
+
 ## 🚀 ROADMAP
 * **Fase 1:** Distribuzione del motore VLA e elaborazione dell'input multi-modale su Hailo-10.
 * **Fase 2:** Integrazione del pianificatore semantico con modelli comportamentali di sciame e memoria a lungo termine.
