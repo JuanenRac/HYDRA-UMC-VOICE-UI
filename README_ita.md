@@ -27,6 +27,7 @@ Consente agli operatori di controllare le missioni robotiche, interrogare lo sta
 * 🎙️ **Edge STT:** Modelli Whisper quantizzati per una trascrizione vocale quasi istantanea. *(pianificato - richiede una vera dipendenza da modello)*
 * 📢 **TTS naturale:** Sintesi vocale di alta qualità per avvisi di sistema e rapporti sullo stato. *(pianificato)*
 * 🧠 **Parser NLU (v0):** Estrazione reale di intenti/entità dal testo riconosciuto, basata su regole, per il Semantic Planner. *(implementato come regole regex su un piccolo vocabolario reale di comandi - non un modello ML addestrato; vedi BUILD ED ESECUZIONE sotto)*
+* 🔀 **Classificazione consapevole dell'ambiguità:** `classify_intent()` normalizza il testo (Unicode NFKC, rimozione di riempitivi/punteggiatura) e rifiuta una trascrizione che corrisponde realmente a più di un comando noto invece di indovinarne uno in silenzio. *(implementato; usato dal gateway vocale per Watch più sotto)*
 * 🛡️ **Cancellazione del rumore:** Ottimizzato per ambienti industriali con elevato rumore ambientale. *(pianificato)*
 * 👨‍👩‍👧 **Figlio del Cognitive AI Node:** Gira come uno dei quattro
   servizi fratelli sotto [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE)
@@ -102,6 +103,24 @@ fratelli (VLA-Engine, Semantic-Planner, Docs-QA):
   per testo fuori dal suo insieme di regole - v0 non ha un modello di
   riserva, quindi non inventa mai un segmento o un intento che non ha
   realmente rilevato.
+* **Perché il gateway Watch usa `classify_intent()`, non il
+  `parse_intent()` legacy.** `parse_intent()` resta "vince la prima
+  corrispondenza" (invariato, ancora testato così com'è) per i chiamanti
+  esistenti, ma una trascrizione reale che corrisponde realmente a più
+  di un comando noto (ad esempio contenente sia "stop" che "status") è
+  un'ambiguità reale e rilevante per la sicurezza in un gateway il cui
+  unico compito è decidere se un comando di movimento richiede conferma
+  - `classify_intent()` controlla ogni regola e segnala un caso di
+  ambiguità reale e distinto invece di risolverlo silenziosamente verso
+  qualunque regola sia dichiarata per prima.
+* **Perché `normalize_text()` applica Unicode NFKC prima della
+  corrispondenza.** Alcune pipeline di speech-to-text emettono lettere
+  latine a larghezza intera e altre forme Unicode di compatibilità -
+  punti di codice distinti dall'ASCII ordinario, e quindi non "la
+  parola" per quanto riguarda un'espressione regolare `\b...\b`. NFKC
+  li riduce prima al loro equivalente ordinario, così un comando
+  semanticamente identico a una regola nota non viene mai trattato come
+  un fallimento onesto solo per come è stato codificato.
 
 ---
 
@@ -111,7 +130,7 @@ fratelli (VLA-Engine, Semantic-Planner, Docs-QA):
 HYDRA-UMC-VOICE-UI/
 ├── src/hydra_umc_voice_ui/
 │   ├── audio.py               # Caricamento WAV reale + rilevamento attività vocale per energia
-│   ├── intent.py               # Parser reale di intenti/entità basato su regole
+│   ├── intent.py               # Parser reale di intenti/entità basato su regole + classify_intent() consapevole dell'ambiguità
 │   └── main.py                  # Punto di ingresso + sottocomandi reali `analyze-audio`/`parse-intent`
 ├── tests/                    # Test reali: fixture WAV, VAD, regole di intento, CLI end-to-end
 ├── docs/                     # Documentazione e catalogo dei comandi
@@ -196,6 +215,13 @@ run.bat parse-intent "status of robot 3"
 `python -m hydra_umc_voice_ui.main serve` espone un gateway HTTP locale e volutamente limitato per un'integrazione associata con HYDRA-UMC-WATCH: `GET /health` e `POST /v1/voice/turn`. Il gateway convalida il payload tipizzato `voice_turn`, usa l'analizzatore di intenti deterministico esistente e restituisce `assistant_reply`; non controlla hardware del robot.
 
 Lo sviluppo in loopback può essere eseguito senza token. Un bind non-loopback richiede `HYDRA_UMC_VOICE_UI_TOKEN` e un'intestazione `Authorization: Bearer` corrispondente. Questa API non invia mai audio grezzo e gli intenti relativi al movimento restituiscono sempre `requiresConfirmation: true`.
+
+Una trascrizione che corrisponde realmente a più di un comando noto viene rifiutata con una risposta reale e distinta invece di essere risolta silenziosamente in un'unica interpretazione:
+
+```json
+{"transcript": "stop the status check"}
+// -> {"text": "That request matched more than one action (status, stop). Please rephrase it more specifically.", "requiresConfirmation": false, "intent": null}
+```
 
 Vedere [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) per il contratto della richiesta e il limite di distribuzione.
 

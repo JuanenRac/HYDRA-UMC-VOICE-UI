@@ -27,6 +27,7 @@ Il permet aux opérateurs de contrôler les missions robotiques, de consulter l'
 * 🎙️ **Edge STT :** Modèles Whisper quantifiés pour une transcription vocale quasi instantanée. *(prévu - nécessite une vraie dépendance de modèle)*
 * 📢 **TTS naturel :** Synthèse vocale de haute qualité pour les alertes système et les rapports d'état. *(prévu)*
 * 🧠 **Analyseur NLU (v0) :** Extraction réelle d'intention/entités du texte reconnu, à base de règles, pour le planificateur sémantique. *(implémenté comme des règles regex sur un petit vocabulaire réel de commandes - pas un modèle de ML entraîné ; voir BUILD ET EXÉCUTION ci-dessous)*
+* 🔀 **Classification consciente de l'ambiguïté :** `classify_intent()` normalise le texte (Unicode NFKC, suppression des mots de remplissage/ponctuation) et rejette une transcription qui correspond réellement à plus d'une commande connue au lieu de deviner silencieusement laquelle. *(implémenté ; utilisé par la passerelle vocale Watch ci-dessous)*
 * 🛡️ **Suppression du bruit :** Optimisé pour les environnements industriels avec un bruit ambiant élevé. *(prévu)*
 * 👨‍👩‍👧 **Enfant du Cognitive AI Node :** Fonctionne comme l'un des
   quatre services frères sous [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE)
@@ -101,6 +102,26 @@ frères (VLA-Engine, Semantic-Planner, Docs-QA) :
   texte hors de son jeu de règles - v0 n'a pas de modèle de repli, donc
   il n'invente jamais un segment ou une intention qu'il n'a pas
   réellement détecté.
+* **Pourquoi la passerelle Watch utilise `classify_intent()`, et non
+  l'ancien `parse_intent()`.** `parse_intent()` reste "la première
+  correspondance gagne" (inchangé, toujours testé tel quel) pour les
+  appelants existants, mais une transcription réelle qui correspond
+  réellement à plus d'une commande connue (par exemple contenant à la
+  fois "stop" et "status") est une ambiguïté réelle et pertinente pour
+  la sécurité dans une passerelle dont tout le rôle est de décider si
+  une commande de mouvement nécessite une confirmation -
+  `classify_intent()` vérifie chaque règle et signale un cas
+  d'ambiguïté réel et distinct au lieu de le résoudre silencieusement
+  vers la règle déclarée en premier.
+* **Pourquoi `normalize_text()` applique Unicode NFKC avant la mise en
+  correspondance.** Certains pipelines speech-to-text émettent des
+  lettres latines pleine chasse et d'autres formes Unicode de
+  compatibilité - des points de code distincts des caractères ASCII
+  ordinaires, et donc pas "le mot" du point de vue d'une expression
+  régulière `\b...\b`. NFKC les ramène d'abord à leur équivalent
+  ordinaire, afin qu'une commande sémantiquement identique à une règle
+  connue ne soit jamais traitée comme un échec honnête simplement à
+  cause de son encodage.
 
 ---
 
@@ -110,7 +131,7 @@ frères (VLA-Engine, Semantic-Planner, Docs-QA) :
 HYDRA-UMC-VOICE-UI/
 ├── src/hydra_umc_voice_ui/
 │   ├── audio.py               # Chargement WAV réel + détection d'activité vocale par énergie
-│   ├── intent.py               # Analyseur réel d'intention/entités à base de règles
+│   ├── intent.py               # Analyseur réel d'intention/entités à base de règles + classify_intent() conscient de l'ambiguïté
 │   └── main.py                  # Point d'entrée + sous-commandes réelles `analyze-audio`/`parse-intent`
 ├── tests/                    # Tests réels : fixtures WAV, VAD, règles d'intention, CLI de bout en bout
 ├── docs/                     # Documentation et catalogue de commandes
@@ -196,6 +217,13 @@ run.bat parse-intent "status of robot 3"
 `python -m hydra_umc_voice_ui.main serve` expose une passerelle HTTP locale volontairement limitée pour une intégration appairée avec HYDRA-UMC-WATCH : `GET /health` et `POST /v1/voice/turn`. Elle valide le message typé `voice_turn`, utilise l'analyseur d'intentions déterministe existant et renvoie `assistant_reply` ; elle ne contrôle aucun matériel robotique.
 
 Le développement en loopback peut fonctionner sans jeton. Une écoute hors loopback exige `HYDRA_UMC_VOICE_UI_TOKEN` et un en-tête `Authorization: Bearer` correspondant. Cette API ne transporte jamais d'audio brut et les intentions liées au mouvement renvoient toujours `requiresConfirmation: true`.
+
+Une transcription qui correspond réellement à plus d'une commande connue est rejetée avec une réponse réelle et distincte au lieu d'être résolue silencieusement vers une seule interprétation :
+
+```json
+{"transcript": "stop the status check"}
+// -> {"text": "That request matched more than one action (status, stop). Please rephrase it more specifically.", "requiresConfirmation": false, "intent": null}
+```
 
 Consultez [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) pour le contrat de requête et la limite de déploiement.
 

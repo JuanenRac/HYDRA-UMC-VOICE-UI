@@ -16,7 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import re
 
-from .intent import INTENT_GO_HOME, INTENT_START_MISSION, INTENT_STATUS, INTENT_STOP, Intent, parse_intent
+from .intent import INTENT_GO_HOME, INTENT_START_MISSION, INTENT_STATUS, INTENT_STOP, Intent, classify_intent
 
 MAX_TRANSCRIPT_LENGTH = 500
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -74,9 +74,17 @@ class AssistantReply:
 
 
 def process_voice_turn(turn: VoiceTurn) -> AssistantReply:
-    """Parse one Watch request and return an honest, non-actuating reply."""
-    intent = parse_intent(turn.transcript)
-    if intent is None:
+    """Parse one Watch request and return an honest, non-actuating reply.
+
+    Uses the ambiguity-aware `classify_intent()` rather than the legacy
+    first-match-wins `parse_intent()`: a real transcript that genuinely
+    matches more than one known command is a real safety-relevant
+    ambiguity - it is never silently resolved to whichever rule happens
+    to be declared first, since guessing wrong on a motion command is
+    exactly the failure mode this gateway exists to prevent.
+    """
+    classification = classify_intent(turn.transcript)
+    if classification.is_no_match:
         return AssistantReply(
             request_id=turn.request_id,
             text="I did not understand that safely. Ask for status, start a mission, stop, or go home.",
@@ -85,6 +93,17 @@ def process_voice_turn(turn: VoiceTurn) -> AssistantReply:
             requires_confirmation=False,
             intent=None,
         )
+    if classification.is_ambiguous:
+        names = ", ".join(sorted({match.name for match in classification.matches}))
+        return AssistantReply(
+            request_id=turn.request_id,
+            text=f"That request matched more than one action ({names}). Please rephrase it more specifically.",
+            level="ATTENTION",
+            speak=True,
+            requires_confirmation=False,
+            intent=None,
+        )
+    intent = classification.matches[0]
 
     if intent.name == INTENT_STATUS:
         robot = intent.entities.get("robot_id")

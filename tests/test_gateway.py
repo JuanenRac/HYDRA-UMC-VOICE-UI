@@ -44,6 +44,24 @@ def test_motion_related_turn_requires_primary_confirmation() -> None:
     assert "No motion is executed" in reply.text
 
 
+def test_ambiguous_turn_is_rejected_not_silently_guessed() -> None:
+    # A real transcript that genuinely matches more than one known
+    # command (both "stop" and "status" here) must never be silently
+    # resolved to one interpretation - it gets a real, distinct
+    # clarification request instead, and never requires confirmation
+    # (there is no single action to confirm).
+    reply = process_voice_turn(VoiceTurn.from_payload({
+        "requestId": "watch-voice-003",
+        "transcript": "stop the status check",
+        "locale": "en-US",
+    }))
+
+    assert reply.intent is None
+    assert reply.requires_confirmation is False
+    assert "more than one action" in reply.text
+    assert "status" in reply.text and "stop" in reply.text
+
+
 def test_invalid_or_oversized_turn_is_rejected() -> None:
     with pytest.raises(VoiceTurnValidationError):
         VoiceTurn.from_payload({"requestId": "bad id", "transcript": "status", "locale": "en"})

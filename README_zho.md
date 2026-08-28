@@ -29,6 +29,7 @@ Hailo-10 NPU 加速的高性能 STT（语音转文本）和 TTS（文本转语�
 * 🎙️ **边缘端 STT：** 用于近乎即时语音转录的量化 Whisper 模型。*（计划中——需要真实的模型依赖）*
 * 📢 **自然 TTS：** 用于系统告警和状态报告的高质量语音合成。*（计划中）*
 * 🧠 **NLU 解析器（v0）：** 基于规则的真实意图/实体提取，作用于识别出的文本，供语义规划器使用。*（已实现为对一个小型真实命令词汇表的正则规则——并非经过训练的 ML 模型；见下方“构建与运行”）*
+* 🔀 **歧义感知分类：** `classify_intent()` 会对文本进行规范化（Unicode NFKC、去除填充词/标点），并拒绝真正匹配多个已知命令的转录文本，而不是悄悄地猜一个。*（已实现；供下方 Watch 语音网关使用）*
 * 🛡️ **噪声消除：** 针对高环境噪声的工业环境进行优化。*（计划中）*
 * 👨‍👩‍👧 **认知 AI 节点子项目：** 作为
   [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE) 下 4 个同级服务之一运行（与 VLA-Engine、Semantic-Planner 和 Docs-QA 并列），共享父项目的 HydraOS 镜像和模型权重，而非各自保留独立副本。
@@ -62,6 +63,8 @@ flowchart LR
 * **为何 `audio.py` 使用 `wave`/`array` 而非 numpy。** 16 位 PCM 解码和真实的能量阈值 VAD 除了标准库已经提供的之外，不需要任何东西——让 v0 保持零依赖，意味着真实的音频前端可以在任何运行 Python 的地方工作，甚至在安装任何 Hailo-10 专用 STT 依赖之前就能运行。
 * **为何 `intent.py` 是真实的正则规则，而非经过训练的 NLU 模型。** 一个小型真实的命令词汇表（start/stop/status/go home）如今已被规则完全且诚实地覆盖——这与兄弟项目 HYDRA-UMC-DOCS-QA 使用真实 TF-IDF 索引而非嵌入模型的理由相同：一个真实的、可测试的内核，未来基于 ML 的分类器可以在识别出的语音需要覆盖超出这个 v0 词汇表的内容时，在同一个 `parse_intent()` 契约背后替换它。
 * **为何不匹配的音频/文本会返回一个诚实的未命中，而非一个猜测。** `detect_voice_segments()` 对静音返回空列表，`parse_intent()` 对规则集之外的文本返回 `None`——v0 没有可回退的模型，因此它绝不会捏造一个实际上并未真正检测到的语音段或意图。
+* **为何 Watch 网关使用 `classify_intent()` 而非旧版 `parse_intent()`。** 对现有调用方而言，`parse_intent()` 仍保持"第一个匹配即胜出"的行为不变，依旧按原样测试；但一段真正同时匹配多个已知命令的真实转录文本（例如同时包含"stop"和"status"）对于一个全部职责就是判断运动命令是否需要确认的网关来说，是一个真实的、与安全相关的歧义——`classify_intent()` 会检查每一条规则，并报告一个真实、明确区分的歧义情形，而不是悄悄地解析为恰好排在最前面的那条规则。
+* **为何 `normalize_text()` 在匹配前应用 Unicode NFKC。** 一些语音转文本流水线会输出全角拉丁字母及其他兼容性 Unicode 形式——这些是与普通 ASCII 不同的码点，因此就 `\b...\b` 正则表达式而言并不算"这个词"。NFKC 会先将它们折叠为普通等价形式，这样一条与已知规则语义相同的命令就不会仅仅因为编码方式的不同而被当成诚实的未命中。
 
 ---
 
@@ -71,7 +74,7 @@ flowchart LR
 HYDRA-UMC-VOICE-UI/
 ├── src/hydra_umc_voice_ui/
 │   ├── audio.py               # 真实的 WAV 加载 + 基于能量的语音活动检测
-│   ├── intent.py               # 真实的基于规则的意图/实体解析器
+│   ├── intent.py               # 真实的基于规则的意图/实体解析器 + 具备歧义感知能力的 classify_intent()
 │   └── main.py                  # 入口点 + 真实的 `analyze-audio`/`parse-intent` 子命令
 ├── tests/                    # 真实测试：WAV 夹具、VAD、意图规则、端到端 CLI
 ├── docs/                     # 文档与指令目录
@@ -140,6 +143,13 @@ run.bat parse-intent "status of robot 3"
 `python -m hydra_umc_voice_ui.main serve` 为已配对的 HYDRA-UMC-WATCH 集成提供有意限制的本地 HTTP 网关：`GET /health` 和 `POST /v1/voice/turn`。网关会验证类型化的 `voice_turn` 负载，使用现有的确定性意图解析器并返回 `assistant_reply`；它不控制机器人硬件。
 
 回环开发可在无令牌的情况下运行。非回环绑定要求 `HYDRA_UMC_VOICE_UI_TOKEN` 以及匹配的 `Authorization: Bearer` 标头。该 API 绝不传输原始音频，且与运动相关的意图始终返回 `requiresConfirmation: true`。
+
+一段真正同时匹配多个已知命令的转录文本会被拒绝，并返回一个真实、明确区分的回复，而不是被悄悄地解析为单一的理解结果：
+
+```json
+{"transcript": "stop the status check"}
+// -> {"text": "That request matched more than one action (status, stop). Please rephrase it more specifically.", "requiresConfirmation": false, "intent": null}
+```
 
 请求协议和部署边界请参阅 [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md)。
 

@@ -27,6 +27,7 @@ It allows operators to control robotic missions, query system status, and receiv
 * 🎙️ **Edge STT:** Quantized Whisper models for near-instant speech transcription. *(planned - needs a real model dependency)*
 * 📢 **Natural TTS:** High-quality voice synthesis for system alerts and status reports. *(planned)*
 * 🧠 **NLU Parser (v0):** Real rule-based intent/entity extraction from recognized text for the Semantic Planner. *(implemented as regex rules over a small real command vocabulary - not a trained ML model; see BUILD & RUN below)*
+* 🔀 **Ambiguity-Aware Classification:** `classify_intent()` normalizes text (Unicode NFKC, filler/punctuation stripping) and rejects a transcript that genuinely matches more than one known command instead of silently guessing one. *(implemented; used by the Watch voice gateway below)*
 * 🛡️ **Noise Cancellation:** Optimized for industrial environments with high ambient noise. *(planned)*
 * 👨‍👩‍👧 **Cognitive AI Node Child:** Runs as one of four sibling services
   under [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE)
@@ -94,6 +95,22 @@ service into `docker-compose.yml` alongside its three siblings
   `parse_intent()` returns `None` for text outside its rule set - v0 has
   no model to fall back on, so it never fabricates a segment or an
   intent it didn't actually detect.
+* **Why the Watch gateway uses `classify_intent()`, not the legacy
+  `parse_intent()`.** `parse_intent()` stays first-match-wins (unchanged,
+  still tested as-is) for existing callers, but a real transcript that
+  genuinely matches more than one known command (e.g. containing both
+  "stop" and "status") is a real, safety-relevant ambiguity for a
+  gateway whose whole job is deciding whether a motion command needs
+  confirmation - `classify_intent()` checks every rule and reports a
+  real, distinct ambiguous case instead of silently resolving to
+  whichever rule happens to be declared first.
+* **Why `normalize_text()` applies Unicode NFKC before matching.** Some
+  speech-to-text pipelines emit full-width Latin letters and other
+  compatibility Unicode forms - distinct code points from ordinary
+  ASCII, and therefore not "the word" as far as a `\b...\b` regex is
+  concerned. NFKC collapses them to their ordinary equivalent first, so
+  a command that's semantically identical to a known rule is never
+  treated as an honest non-match just because of how it was encoded.
 
 ---
 
@@ -103,7 +120,7 @@ service into `docker-compose.yml` alongside its three siblings
 HYDRA-UMC-VOICE-UI/
 ├── src/hydra_umc_voice_ui/
 │   ├── audio.py               # Real WAV loading + energy-gate voice-activity detection
-│   ├── intent.py               # Real rule-based intent/entity parser
+│   ├── intent.py               # Real rule-based intent/entity parser + ambiguity-aware classify_intent()
 │   └── main.py                  # Entry point + real `analyze-audio`/`parse-intent` subcommands
 ├── tests/                    # Real tests: WAV fixtures, VAD, intent rules, end-to-end CLI
 ├── docs/                     # Documentation and command catalog
@@ -185,6 +202,13 @@ run.bat parse-intent "status of robot 3"
 `python -m hydra_umc_voice_ui.main serve` exposes a deliberately bounded local HTTP gateway for a paired HYDRA-UMC-WATCH integration: `GET /health` and `POST /v1/voice/turn`. The gateway validates the typed `voice_turn` payload, uses the existing deterministic intent parser and returns an `assistant_reply`; it does not control robot hardware.
 
 Loopback development may run without a token. A non-loopback bind requires `HYDRA_UMC_VOICE_UI_TOKEN` and a matching `Authorization: Bearer` header. Raw audio is never sent through this API, and motion-related intents always return `requiresConfirmation: true`.
+
+A transcript that genuinely matches more than one known command is rejected with a real, distinct reply instead of being silently resolved to one interpretation:
+
+```json
+{"transcript": "stop the status check"}
+// -> {"text": "That request matched more than one action (status, stop). Please rephrase it more specifically.", "requiresConfirmation": false, "intent": null}
+```
 
 See [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) for the request contract and deployment boundary.
 

@@ -21,6 +21,14 @@ bumped manually only. See `bump_version.py`.
 - `docs/WATCH_VOICE_GATEWAY.md` and gateway contract tests, including a real
   local HTTP request that proves an absent Bearer token is rejected.
 
+## [0.0.6] - Ambiguity-aware intent classification, real text normalization
+
+### Added
+
+- **Real intent normalization** (`intent.py`'s `normalize_text()`) - Unicode NFKC (collapses compatibility forms a real speech-to-text transcript can emit, e.g. full-width Latin letters, to their ordinary ASCII equivalent), punctuation-noise stripping, and common filler-phrase removal ("please", "could you", ...), applied before classification so a transcript that's semantically identical to a known command is never treated as an honest non-match just because of how it was encoded or phrased.
+- **Real ambiguous-command detection** (`intent.py`'s `classify_intent()`/`IntentClassification`, new) - checks every rule (not first-match-wins like the existing `parse_intent()`, left untouched) and reports every one that genuinely matches. `gateway.py`'s `process_voice_turn()` now uses it: a real transcript matching more than one known command (e.g. one containing both "stop" and "status") gets a real, distinct clarification reply instead of being silently resolved to whichever rule happens to be declared first - the exact failure mode this gateway exists to prevent for a real motion command.
+- 10 new tests (`test_intent.py`, `test_gateway.py`) = 30 total, including a concrete ambiguous transcript, real NFKC full-width-Unicode normalization, and the gateway's new end-to-end ambiguous-turn rejection. `parse_intent()` and the existing motion-confirmation policy (`requiresConfirmation`, already real) are unchanged - this is a purely additive safety improvement.
+
 ## [0.0.5] - Real v0 audio front-end + rule-based intent parsing
 ### Added
 - `audio.py` - real, stdlib-only 16-bit PCM WAV loading (`wave` + `array`,
