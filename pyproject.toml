@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hydra-umc-voice-ui"
-version = "0.0.7"
+version = "0.0.8"
 description = "Local hardware-accelerated Speech-to-Action pipeline (STT/TTS) for hands-free robotic mission control on Hailo-10."
 readme = "README.md"
 requires-python = ">=3.10"

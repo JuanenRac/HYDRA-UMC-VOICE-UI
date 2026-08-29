@@ -21,6 +21,18 @@ bumped manually only. See `bump_version.py`.
 - `docs/WATCH_VOICE_GATEWAY.md` and gateway contract tests, including a real
   local HTTP request that proves an absent Bearer token is rejected.
 
+## [0.0.8] - Real ecosystem live-status opt-in
+
+- **`hydra-umc.project.json`** declares its real `service.port` (8090)
+  and `health_path` (`/health`) - HYDRA-UMC-SERVER's ecosystem status
+  endpoint now does a real HTTP GET against it (expecting 2xx) instead
+  of only reporting static manifest metadata. Honest note surfaced while
+  doing this across the ecosystem: this default port (8090) is identical
+  to HYDRA-UMC-JOB-DISPATCHER's own default - not evaluated here whether
+  both are ever expected to run on the same host; flagging it as a real
+  fact worth checking before both are deployed together, not fixing it
+  as part of this manifest-only change.
+
 ## [0.0.7] - Clean CLI errors for two unhandled real-input failures
 
 ### Fixed
