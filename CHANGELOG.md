@@ -21,6 +21,35 @@ bumped manually only. See `bump_version.py`.
 - `docs/WATCH_VOICE_GATEWAY.md` and gateway contract tests, including a real
   local HTTP request that proves an absent Bearer token is rejected.
 
+## [0.0.7] - Clean CLI errors for two unhandled real-input failures
+
+### Fixed
+- **`analyze-audio` on a corrupt/invalid WAV file** (`main.py`'s
+  `_run_analyze_audio()`) - `audio.py`'s `load_wav()` opens the file with
+  the stdlib `wave` module, which raises `wave.Error` (or `EOFError` on a
+  truncated header) for anything that isn't a valid PCM WAV. Neither is an
+  `OSError` subclass, so neither was caught anywhere in the call chain -
+  a real corrupt recording (once a real microphone starts producing
+  files, not just this repo's own hand-written test fixtures) surfaced as
+  a raw traceback instead of the same clean `ERROR: ...` + exit code 1
+  this function already used for a missing file.
+- **`serve` on a port already in use** (`main.py`'s `_run_serve()`) - only
+  `ValueError` (the missing-token-on-non-loopback-bind case) was caught
+  around `create_voice_gateway()`. `ThreadingHTTPServer.__init__` does the
+  real `bind()`/`listen()` and raises a plain `OSError` when the port is
+  already taken; unhandled, that showed up as a raw Python traceback in
+  the CM5 systemd (`Restart=on-failure`) logs instead of a diagnosable
+  error. Now caught alongside the existing `ValueError` handling and
+  reported the same way.
+- Both were found in a live ecosystem bug audit, not from a user report.
+
+### Added
+- 2 new regression tests (`test_cli.py`) = 32 total: `analyze-audio`
+  against a real invalid WAV file (plain text saved with a `.wav`
+  extension) asserting a clean error and exit code 1 instead of a
+  traceback, and `serve` started against a port a raw socket already has
+  bound and listening, asserting the same clean failure instead of one.
+
 ## [0.0.6] - Ambiguity-aware intent classification, real text normalization
 
 ### Added

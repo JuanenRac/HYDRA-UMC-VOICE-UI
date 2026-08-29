@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import wave
 from pathlib import Path
 
 from . import __version__
@@ -41,7 +42,11 @@ def _run_analyze_audio(path: Path) -> int:
         print(f"ERROR: file not found: {path}")
         return 1
 
-    clip = load_wav(path)
+    try:
+        clip = load_wav(path)
+    except (wave.Error, EOFError) as error:
+        print(f"ERROR: not a valid PCM WAV file: {path} ({error})")
+        return 1
     print(f"File: {path.name}")
     print(f"Sample rate: {clip.sample_rate} Hz")
     print(f"Channels: {clip.channels}")
@@ -78,6 +83,12 @@ def _run_serve(host: str, port: int) -> int:
         gateway = create_voice_gateway(host, port)
     except ValueError as error:
         print(f"ERROR: {error}")
+        return 1
+    except OSError as error:
+        # ThreadingHTTPServer.__init__ does the real bind()/listen() and
+        # raises a plain OSError (e.g. the port is already in use) - a
+        # real, expected CM5 deployment failure mode, not a bug to trace.
+        print(f"ERROR: cannot bind {host}:{port} ({error})")
         return 1
     print(f"{PROJECT_NAME} voice gateway listening on http://{host}:{port}")
     print("POST /v1/voice/turn accepts bounded text only; it never actuates robots.")
