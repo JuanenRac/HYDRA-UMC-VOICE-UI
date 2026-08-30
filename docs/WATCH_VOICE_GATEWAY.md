@@ -47,6 +47,8 @@ configured:
 }
 ```
 
-The response is an `assistant_reply` compatible with the Watch protocol. A
-recognised motion request is labelled `requiresConfirmation: true`; this v0
-service does not dispatch robot commands.
+The response is an `assistant_reply` compatible with the Watch protocol. Its
+additive `visualState` is a bounded UI hint (`acknowledged`, `clarification`,
+`confirmation-required` or `warning`) for the Watch display; it is not a live
+robot-health or motion-state claim. A recognised motion request is labelled
+`requiresConfirmation: true`; this v0 service does not dispatch robot commands.

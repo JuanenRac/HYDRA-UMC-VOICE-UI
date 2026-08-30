@@ -29,6 +29,7 @@ def test_status_turn_preserves_request_id_and_never_claims_live_data() -> None:
     assert reply.intent.name == "status"
     assert reply.requires_confirmation is False
     assert "Live telemetry will be supplied" in reply.text
+    assert reply.to_payload()["visualState"] == "acknowledged"
 
 
 def test_motion_related_turn_requires_primary_confirmation() -> None:
@@ -42,6 +43,7 @@ def test_motion_related_turn_requires_primary_confirmation() -> None:
     assert reply.intent.name == "start_mission"
     assert reply.requires_confirmation is True
     assert "No motion is executed" in reply.text
+    assert reply.to_payload()["visualState"] == "confirmation-required"
 
 
 def test_ambiguous_turn_is_rejected_not_silently_guessed() -> None:
@@ -60,6 +62,17 @@ def test_ambiguous_turn_is_rejected_not_silently_guessed() -> None:
     assert reply.requires_confirmation is False
     assert "more than one action" in reply.text
     assert "status" in reply.text and "stop" in reply.text
+    assert reply.to_payload()["visualState"] == "clarification"
+
+
+def test_stop_reply_has_warning_visual_state_without_claiming_execution() -> None:
+    reply = process_voice_turn(VoiceTurn.from_payload({
+        "requestId": "watch-voice-004",
+        "transcript": "stop",
+        "locale": "en-US",
+    }))
+    assert reply.to_payload()["visualState"] == "warning"
+    assert reply.requires_confirmation is True
 
 
 def test_invalid_or_oversized_turn_is_rejected() -> None:

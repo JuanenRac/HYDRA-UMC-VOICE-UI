@@ -7,6 +7,9 @@ bumped manually only. See `bump_version.py`.
 
 ## [Unreleased]
 ### Added
+- `assistant_reply.visualState` - a bounded, additive Watch display hint for
+  acknowledgement, clarification, confirmation-required and warning states.
+  It never claims live robot state and it never authorizes a physical action.
 - `systemd/hydra-umc-voice-ui.service` and `deploy/voice-ui.env.example` - a
   loopback-only CM5 service boundary. HYDRA-UMC-SERVER owns the matching token
   and is the only production caller; the gateway still receives recognised

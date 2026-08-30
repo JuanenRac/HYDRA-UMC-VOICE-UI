@@ -59,6 +59,18 @@ class AssistantReply:
     requires_confirmation: bool
     intent: Intent | None
 
+    @property
+    def visual_state(self) -> str:
+        """Return a bounded Watch UI hint; it is never a robot-state claim."""
+
+        if self.level == "WARNING":
+            return "warning"
+        if self.intent is None:
+            return "clarification"
+        if self.requires_confirmation:
+            return "confirmation-required"
+        return "acknowledged"
+
     def to_payload(self) -> dict[str, object]:
         payload: dict[str, object] = {
             "type": "assistant_reply",
@@ -67,6 +79,7 @@ class AssistantReply:
             "level": self.level,
             "speak": self.speak,
             "requiresConfirmation": self.requires_confirmation,
+            "visualState": self.visual_state,
         }
         if self.intent is not None:
             payload["intent"] = {"name": self.intent.name, "entities": self.intent.entities}
