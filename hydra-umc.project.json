@@ -14,7 +14,7 @@
   "maturity": "established",
   "family": "Cognitive AI Node",
   "parent": "HYDRA-UMC-COGNITIVE-NODE",
-  "build": "",
+  "build": "python tools/build_test.py",
   "notes": "Real v0 audio front-end (WAV loading + energy-gate voice activity detection, stdlib-only), rule-based intent/entity parser over already-transcribed text, and a bounded Watch voice-turn HTTP gateway. Server now relays authenticated client requests to a loopback CM5 service while retaining the gateway token; replies require primary-control confirmation for motion. Real intent normalization (Unicode NFKC, filler/punctuation stripping) and ambiguity-aware classification (classify_intent) reject a transcript that genuinely matches more than one known command instead of silently guessing. Whisper STT / neural TTS still require their real model/runtime dependencies.",
   "native_version": {
     "file": "pyproject.toml",
