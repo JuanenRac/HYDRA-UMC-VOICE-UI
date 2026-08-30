@@ -21,6 +21,16 @@ bumped manually only. See `bump_version.py`.
 - `docs/WATCH_VOICE_GATEWAY.md` and gateway contract tests, including a real
   local HTTP request that proves an absent Bearer token is rejected.
 
+## [0.0.9] - Fixed a real version-mirror drift
+
+- **`src/hydra_umc_voice_ui/__init__.py`**'s `__version__` had fallen one
+  real build behind `pyproject.toml`/the manifest - running only
+  `bump_manifest_version.py` (which only touches its declared
+  `native_version.file`, pyproject.toml) without this repo's separate
+  `bump_version.py` (the one that keeps `__init__.py` mirrored) leaves
+  the two drifting apart. Fixed via the real, intended sequence
+  (`bump_version.py` then `bump_manifest_version.py --sync`).
+
 ## [0.0.8] - Real ecosystem live-status opt-in
 
 - **`hydra-umc.project.json`** declares its real `service.port` (8090)
