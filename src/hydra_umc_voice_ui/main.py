@@ -118,7 +118,7 @@ def build_parser() -> argparse.ArgumentParser:
     serve_parser = subparsers.add_parser(
         "serve", help="Run the local authenticated Watch voice-turn gateway.")
     serve_parser.add_argument("--host", default="127.0.0.1", help="Bind host (non-loopback requires HYDRA_UMC_VOICE_UI_TOKEN).")
-    serve_parser.add_argument("--port", type=int, default=8090, help="Bind TCP port (default: 8090).")
+    serve_parser.add_argument("--port", type=int, default=8091, help="Bind TCP port (default: 8091).")
 
     return parser
 

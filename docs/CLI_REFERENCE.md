@@ -181,7 +181,7 @@ usage: hydra-umc-voice-ui serve [-h] [--host HOST] [--port PORT]
 options:
   -h, --help   show this help message and exit
   --host HOST  Bind host (non-loopback requires HYDRA_UMC_VOICE_UI_TOKEN).
-  --port PORT  Bind TCP port (default: 8090).
+  --port PORT  Bind TCP port (default: 8091).
 ```
 
 Runs the real local Watch voice-turn HTTP gateway (stdlib

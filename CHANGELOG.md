@@ -21,6 +21,21 @@ bumped manually only. See `bump_version.py`.
 - `docs/WATCH_VOICE_GATEWAY.md` and gateway contract tests, including a real
   local HTTP request that proves an absent Bearer token is rejected.
 
+## [0.1.0] - Resolved the real port collision with HYDRA-UMC-JOB-DISPATCHER
+
+- **Default port moved 8090 -> 8091.** [0.0.8] flagged, but deliberately
+  did not fix, that this gateway's default port was identical to
+  HYDRA-UMC-JOB-DISPATCHER's own default - a real problem if both are
+  ever deployed on the same CM5 host. Changed here across every real
+  reference: `main.py`'s `serve --port` default,
+  `systemd/hydra-umc-voice-ui.service`'s `ExecStart`,
+  `hydra-umc.project.json`'s `service.port` (the field
+  HYDRA-UMC-SERVER's ecosystem live-status probe reads),
+  `docs/CLI_REFERENCE.md` and `docs/WATCH_VOICE_GATEWAY.md`.
+  HYDRA-UMC-OS's own provisioning/deployment-contract files and
+  HYDRA-UMC-SERVER's `docs/REMOTE_API.md` are updated in their own repos'
+  matching commits.
+
 ## [0.0.9] - Fixed a real version-mirror drift
 
 - **`src/hydra_umc_voice_ui/__init__.py`**'s `__version__` had fallen one

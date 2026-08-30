@@ -25,7 +25,7 @@ forwards a normal authenticated client request using that internal secret:
 
 ```text
 HYDRA_UMC_VOICE_UI_TOKEN=<long-random-secret>
-hydra-umc-voice-ui serve --host 127.0.0.1 --port 8090
+hydra-umc-voice-ui serve --host 127.0.0.1 --port 8091
 ```
 
 The production path is Watch -> paired Android transport -> authenticated

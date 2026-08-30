@@ -15,7 +15,7 @@ Group=hydra-umc-voice-ui
 WorkingDirectory=/opt/hydra-umc/voice-ui
 EnvironmentFile=/etc/hydra-umc/voice-ui.env
 Environment=PYTHONPATH=/opt/hydra-umc/voice-ui/src
-ExecStart=/usr/bin/python3 -m hydra_umc_voice_ui.main serve --host 127.0.0.1 --port 8090
+ExecStart=/usr/bin/python3 -m hydra_umc_voice_ui.main serve --host 127.0.0.1 --port 8091
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true

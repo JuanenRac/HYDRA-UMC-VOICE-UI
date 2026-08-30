@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "ecosystem": "HYDRA-UMC",
   "name": "HYDRA-UMC-VOICE-UI",
-  "version": "0.0.9",
+  "version": "0.1.0",
   "role": "service",
   "stack": "python",
   "technologies": [
@@ -21,7 +21,7 @@
     "pattern": "^version\\s*=\\s*\"(\\d+)\\.(\\d+)\\.(\\d+)\""
   },
   "service": {
-    "port": 8090,
+    "port": 8091,
     "health_path": "/health"
   }
 }
