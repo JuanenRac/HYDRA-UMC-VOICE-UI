@@ -224,6 +224,15 @@ See [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) for the request contra
 
 This project is part of a larger robotics ecosystem by the same author (JuanenRac / Electro Hobby 3D), spanning firmware, control software, AI nodes, and fleet tooling.
 
+### Family
+
+**Parent:** **[HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE)** — the Integration Hub that owns this service's shared HydraOS image/weights and wires it into the cognitive workflow.
+
+**Siblings:**
+- **[HYDRA-UMC-SEMANTIC-PLANNER](https://github.com/JuanenRac/HYDRA-UMC-SEMANTIC-PLANNER)** — the LLM planner this service's STT output feeds into.
+- **[HYDRA-UMC-VLA-ENGINE](https://github.com/JuanenRac/HYDRA-UMC-VLA-ENGINE)** — turns vision data into action tokens for the same planner.
+- **[HYDRA-UMC-DOCS-QA](https://github.com/JuanenRac/HYDRA-UMC-DOCS-QA)** — grounds the planner's answers in technical manuals.
+
 ### Directly Related to This Service
 
 - **[HYDRA-UMC-STUDIO](https://github.com/JuanenRac/HYDRA-UMC-STUDIO)** / **[HYDRA-UMC-DSI](https://github.com/JuanenRac/HYDRA-UMC-DSI)** — other voice-control surfaces for the ecosystem.
