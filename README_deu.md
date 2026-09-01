@@ -226,7 +226,7 @@ Eine Transkription, die wirklich zu mehr als einem bekannten Befehl passt, wird 
 
 Siehe [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) für den Request-Vertrag und die Bereitstellungsgrenze.
 
-## 🚀 ROADMAP
+## 🚀 FAHRPLAN
 * **Phase 1:** VLA-Engine-Bereitstellung und multimodale Eingabeverarbeitung auf Hailo-10.
 * **Phase 2:** Integration des semantischen Planers mit Schwarmverhaltensmodellen und Langzeitgedächtnis.
 * **Phase 3:** Lokale Ausführung der Voice-UI mit niedriger Latenz und industrielle Geräuschunterdrückung.

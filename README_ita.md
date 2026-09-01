@@ -225,7 +225,7 @@ Una trascrizione che corrisponde realmente a più di un comando noto viene rifiu
 
 Vedere [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) per il contratto della richiesta e il limite di distribuzione.
 
-## 🚀 ROADMAP
+## 🚀 TABELLA DI MARCIA
 * **Fase 1:** Distribuzione del motore VLA e elaborazione dell'input multi-modale su Hailo-10.
 * **Fase 2:** Integrazione del pianificatore semantico con modelli comportamentali di sciame e memoria a lungo termine.
 * **Fase 3:** Esecuzione locale a bassa latenza dell'interfaccia vocale e cancellazione del rumore industriale.
