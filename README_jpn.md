@@ -172,6 +172,15 @@ run.bat parse-intent "status of robot 3"
 ファームウェア、制御ソフトウェア、AI ノード、フリート管理ツールにまたがる、
 より大きなロボティクスエコシステムの一部です。
 
+### ファミリー
+
+**親:** **[HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE)** —— このサービスの共有 HydraOS イメージ/重みを所有し、認知ワークフローに組み込む統合ハブ。
+
+**兄弟:**
+- **[HYDRA-UMC-SEMANTIC-PLANNER](https://github.com/JuanenRac/HYDRA-UMC-SEMANTIC-PLANNER)** —— このサービスの STT 出力が供給される LLM プランナー。
+- **[HYDRA-UMC-VLA-ENGINE](https://github.com/JuanenRac/HYDRA-UMC-VLA-ENGINE)** —— ビジョンデータを同じプランナー向けのアクショントークンに変換します。
+- **[HYDRA-UMC-DOCS-QA](https://github.com/JuanenRac/HYDRA-UMC-DOCS-QA)** —— プランナーの回答を技術マニュアルに基づかせます。
+
 ### 本サービスに直接関連
 
 - **[HYDRA-UMC-STUDIO](https://github.com/JuanenRac/HYDRA-UMC-STUDIO)** / **[HYDRA-UMC-DSI](https://github.com/JuanenRac/HYDRA-UMC-DSI)** —— エコシステム内の他の音声制御インターフェース。

@@ -166,6 +166,15 @@ run.bat parse-intent "status of robot 3"
 本项目是同一作者（JuanenRac / Electro Hobby 3D）打造的更大规模机器人生态
 系统的一部分，涵盖固件、控制软件、AI 节点和车队工具。
 
+### 家族
+
+**父级：** **[HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE)** —— 拥有该服务共享的 HydraOS 镜像/权重并将其接入认知工作流的集成中心。
+
+**兄弟服务：**
+- **[HYDRA-UMC-SEMANTIC-PLANNER](https://github.com/JuanenRac/HYDRA-UMC-SEMANTIC-PLANNER)** —— 该服务的 STT 输出所馈送的 LLM 规划器。
+- **[HYDRA-UMC-VLA-ENGINE](https://github.com/JuanenRac/HYDRA-UMC-VLA-ENGINE)** —— 将视觉数据转换为同一规划器所需的动作令牌。
+- **[HYDRA-UMC-DOCS-QA](https://github.com/JuanenRac/HYDRA-UMC-DOCS-QA)** —— 将规划器的回答建立在技术手册基础上。
+
 ### 与本服务直接相关
 
 - **[HYDRA-UMC-STUDIO](https://github.com/JuanenRac/HYDRA-UMC-STUDIO)** / **[HYDRA-UMC-DSI](https://github.com/JuanenRac/HYDRA-UMC-DSI)** —— 生态系统中的其他语音控制界面。
