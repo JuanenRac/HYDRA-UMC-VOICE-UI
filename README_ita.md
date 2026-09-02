@@ -131,14 +131,23 @@ HYDRA-UMC-VOICE-UI/
 ├── src/hydra_umc_voice_ui/
 │   ├── audio.py               # Caricamento WAV reale + rilevamento attività vocale per energia
 │   ├── intent.py               # Parser reale di intenti/entità basato su regole + classify_intent() consapevole dell'ambiguità
+│   ├── gateway.py               # Gateway testo-a-intento limitato, condiviso dal flusso cognitivo di Watch
+│   ├── http_service.py          # Piccolo confine HTTP stdlib per il percorso vocale Watch-a-cognitive
 │   └── main.py                  # Punto di ingresso + sottocomandi reali `analyze-audio`/`parse-intent`
-├── tests/                    # Test reali: fixture WAV, VAD, regole di intento, CLI end-to-end
+├── tests/                    # Test reali: fixture WAV, VAD, regole di intento, gateway, CLI end-to-end
 ├── docs/                     # Documentazione e catalogo dei comandi
 ├── images/                   # Media e diagrammi
-├── scripts/                  # Script di utilità
+├── deploy/
+│   └── voice-ui.env.example  # Modello di ambiente del gateway locale sulla CM5
+├── systemd/
+│   └── hydra-umc-voice-ui.service # Unità systemd del servizio HTTP vocale locale sulla CM5
+├── tools/
+│   ├── build_test.py         # Controllo build senza versionamento
+│   └── ci_validate.py        # Validazione manifest/CHANGELOG/docs usata dalla CI
 ├── build/                    # Output di build locale (ignorato da git)
-├── pyproject.toml            # Metadati del pacchetto (versione 0.0.5, incremento stile contachilometri)
-├── bump_version.py           # Incremento versione stile contachilometri (usato da build.sh/.bat)
+├── pyproject.toml            # Metadati del pacchetto (versione a incremento contachilometri)
+├── bump_version.py           # Incremento versione nativa stile contachilometri (usato da build.sh/.bat)
+├── bump_manifest_version.py  # Sincronizza la versione di hydra-umc.project.json con quella nativa (--sync)
 ├── build.sh / build.bat      # Crea il venv, installa (con extra dev), verifica l'import, esegue i test
 └── run.sh / run.bat          # Esegue il punto di ingresso (inoltra gli argomenti, es. `analyze-audio`)
 ```

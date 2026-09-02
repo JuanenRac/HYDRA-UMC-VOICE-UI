@@ -75,14 +75,23 @@ HYDRA-UMC-VOICE-UI/
 ├── src/hydra_umc_voice_ui/
 │   ├── audio.py               # 真实的 WAV 加载 + 基于能量的语音活动检测
 │   ├── intent.py               # 真实的基于规则的意图/实体解析器 + 具备歧义感知能力的 classify_intent()
+│   ├── gateway.py               # 受限的文本到意图网关,由 Watch 认知流程共享
+│   ├── http_service.py          # 面向 Watch→认知语音路径的小型 stdlib HTTP 边界
 │   └── main.py                  # 入口点 + 真实的 `analyze-audio`/`parse-intent` 子命令
-├── tests/                    # 真实测试：WAV 夹具、VAD、意图规则、端到端 CLI
+├── tests/                    # 真实测试：WAV 夹具、VAD、意图规则、gateway、端到端 CLI
 ├── docs/                     # 文档与指令目录
 ├── images/                   # 媒体与图表
-├── scripts/                  # 实用脚本
+├── deploy/
+│   └── voice-ui.env.example  # 本地 CM5 网关的环境变量模板
+├── systemd/
+│   └── hydra-umc-voice-ui.service # 本地 CM5 语音 HTTP 服务的 systemd 单元
+├── tools/
+│   ├── build_test.py         # 不递增版本号的构建检查
+│   └── ci_validate.py        # CI 使用的清单/CHANGELOG/文档校验
 ├── build/                    # 本地构建输出（已被 git 忽略）
-├── pyproject.toml            # 包元数据（版本 0.0.5，里程表式递增）
-├── bump_version.py           # 里程表式版本递增（由 build.sh/.bat 使用）
+├── pyproject.toml            # 包元数据（里程表式递增版本号）
+├── bump_version.py           # 原生版本的里程表式递增（由 build.sh/.bat 使用）
+├── bump_manifest_version.py  # 将 hydra-umc.project.json 的版本与原生版本同步(--sync)
 ├── build.sh / build.bat      # 创建 venv、安装（含 dev 附加依赖）、验证导入、运行测试
 └── run.sh / run.bat          # 运行入口点（转发参数，例如 `analyze-audio`）
 ```

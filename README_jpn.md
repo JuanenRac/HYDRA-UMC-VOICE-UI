@@ -78,14 +78,23 @@ HYDRA-UMC-VOICE-UI/
 ├── src/hydra_umc_voice_ui/
 │   ├── audio.py               # 実際の WAV 読み込み + エネルギーによる音声活動検出
 │   ├── intent.py               # 実際のルールベース意図/エンティティパーサー + あいまいさを考慮した classify_intent()
+│   ├── gateway.py               # Watchの認知フローが共有する、範囲を限定したテキスト→意図ゲートウェイ
+│   ├── http_service.py          # Watch→認知の音声経路のための小さなstdlib HTTP境界
 │   └── main.py                  # エントリポイント + 実際の `analyze-audio`/`parse-intent` サブコマンド
-├── tests/                    # 実際のテスト：WAV フィクスチャ、VAD、意図ルール、エンドツーエンド CLI
+├── tests/                    # 実際のテスト：WAV フィクスチャ、VAD、意図ルール、gateway、エンドツーエンド CLI
 ├── docs/                     # ドキュメントとコマンドカタログ
 ├── images/                   # メディアと図表
-├── scripts/                  # ユーティリティスクリプト
+├── deploy/
+│   └── voice-ui.env.example  # ローカルCM5ゲートウェイの環境テンプレート
+├── systemd/
+│   └── hydra-umc-voice-ui.service # ローカルCM5音声HTTPサービスのsystemdユニット
+├── tools/
+│   ├── build_test.py         # バージョンを増やさないビルドチェック
+│   └── ci_validate.py        # CI が使用するマニフェスト/CHANGELOG/ドキュメント検証
 ├── build/                    # ローカルビルド出力（git 管理外）
-├── pyproject.toml            # パッケージメタデータ（バージョン 0.0.5、オドメーター式増加）
-├── bump_version.py           # オドメーター式バージョンインクリメント（build.sh/.bat が使用）
+├── pyproject.toml            # パッケージメタデータ（オドメーター式バージョン増加）
+├── bump_version.py           # ネイティブバージョンのオドメーター式インクリメント（build.sh/.bat が使用）
+├── bump_manifest_version.py  # hydra-umc.project.json のバージョンをネイティブ版と同期(--sync)
 ├── build.sh / build.bat      # venv 作成、インストール（dev エクストラ付き）、インポート検証、テスト実行
 └── run.sh / run.bat          # エントリポイントを実行（引数を転送、例：`analyze-audio`）
 ```

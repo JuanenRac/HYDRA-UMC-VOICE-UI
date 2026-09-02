@@ -121,14 +121,23 @@ HYDRA-UMC-VOICE-UI/
 ├── src/hydra_umc_voice_ui/
 │   ├── audio.py               # Real WAV loading + energy-gate voice-activity detection
 │   ├── intent.py               # Real rule-based intent/entity parser + ambiguity-aware classify_intent()
+│   ├── gateway.py               # Bounded text-to-intent gateway shared by the Watch cognitive flow
+│   ├── http_service.py          # Small stdlib HTTP boundary for the Watch-to-cognitive voice path
 │   └── main.py                  # Entry point + real `analyze-audio`/`parse-intent` subcommands
-├── tests/                    # Real tests: WAV fixtures, VAD, intent rules, end-to-end CLI
+├── tests/                    # Real tests: WAV fixtures, VAD, intent rules, gateway, end-to-end CLI
 ├── docs/                     # Documentation and command catalog
 ├── images/                   # Media and diagrams
-├── scripts/                  # Utility scripts
+├── deploy/
+│   └── voice-ui.env.example  # CM5 local gateway environment template
+├── systemd/
+│   └── hydra-umc-voice-ui.service # Local CM5 voice HTTP service systemd unit
+├── tools/
+│   ├── build_test.py         # Non-versioning build/compile check
+│   └── ci_validate.py        # Manifest/CHANGELOG/docs validation used by CI
 ├── build/                    # Local build output (git-ignored)
 ├── pyproject.toml            # Package metadata (version odometer-bumped on every real build)
-├── bump_version.py           # Odometer-style version bump (used by build.sh/.bat)
+├── bump_version.py           # Odometer-style native version bump (used by build.sh/.bat)
+├── bump_manifest_version.py  # Syncs hydra-umc.project.json's version to the native one (--sync)
 ├── build.sh / build.bat      # Create venv, install (with dev extras), verify import, run tests
 └── run.sh / run.bat          # Run the entry point (forwards args, e.g. `analyze-audio`)
 ```

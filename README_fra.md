@@ -132,14 +132,23 @@ HYDRA-UMC-VOICE-UI/
 ├── src/hydra_umc_voice_ui/
 │   ├── audio.py               # Chargement WAV réel + détection d'activité vocale par énergie
 │   ├── intent.py               # Analyseur réel d'intention/entités à base de règles + classify_intent() conscient de l'ambiguïté
+│   ├── gateway.py               # Passerelle texte-vers-intention bornée, partagée par le flux cognitif Watch
+│   ├── http_service.py          # Petite frontière HTTP stdlib pour le chemin vocal Watch-vers-cognitif
 │   └── main.py                  # Point d'entrée + sous-commandes réelles `analyze-audio`/`parse-intent`
-├── tests/                    # Tests réels : fixtures WAV, VAD, règles d'intention, CLI de bout en bout
+├── tests/                    # Tests réels : fixtures WAV, VAD, règles d'intention, gateway, CLI de bout en bout
 ├── docs/                     # Documentation et catalogue de commandes
 ├── images/                   # Médias et diagrammes
-├── scripts/                  # Scripts utilitaires
+├── deploy/
+│   └── voice-ui.env.example  # Modèle d'environnement de la passerelle locale sur la CM5
+├── systemd/
+│   └── hydra-umc-voice-ui.service # Unité systemd du service HTTP vocal local sur la CM5
+├── tools/
+│   ├── build_test.py         # Vérification de build sans versionnage
+│   └── ci_validate.py        # Validation manifeste/CHANGELOG/docs utilisée par CI
 ├── build/                    # Sortie de build locale (ignorée par git)
-├── pyproject.toml            # Métadonnées du paquet (version 0.0.5, incrément type compteur kilométrique)
-├── bump_version.py           # Incrément de version type compteur kilométrique (utilisé par build.sh/.bat)
+├── pyproject.toml            # Métadonnées du paquet (version à incrément type compteur kilométrique)
+├── bump_version.py           # Incrément de version native type compteur kilométrique (utilisé par build.sh/.bat)
+├── bump_manifest_version.py  # Synchronise la version de hydra-umc.project.json avec la version native (--sync)
 ├── build.sh / build.bat      # Crée le venv, installe (avec extras dev), vérifie l'import, exécute les tests
 └── run.sh / run.bat          # Exécute le point d'entrée (transmet les arguments, ex. `analyze-audio`)
 ```

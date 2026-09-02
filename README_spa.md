@@ -129,14 +129,23 @@ HYDRA-UMC-VOICE-UI/
 ├── src/hydra_umc_voice_ui/
 │   ├── audio.py               # Carga real de WAV + deteccion de actividad de voz por energia
 │   ├── intent.py               # Parser real de intencion/entidades basado en reglas + classify_intent() consciente de ambigüedad
+│   ├── gateway.py               # Puerta de enlace texto-a-intención acotada, compartida por el flujo cognitivo de Watch
+│   ├── http_service.py          # Pequeño límite HTTP de stdlib para la ruta de voz Watch-a-cognitivo
 │   └── main.py                  # Punto de entrada + subcomandos reales `analyze-audio`/`parse-intent`
-├── tests/                    # Tests reales: fixtures WAV, VAD, reglas de intencion, CLI end-to-end
+├── tests/                    # Tests reales: fixtures WAV, VAD, reglas de intencion, gateway, CLI end-to-end
 ├── docs/                     # Documentación y catálogo de comandos
 ├── images/                   # Medios y diagramas
-├── scripts/                  # Scripts de utilidad
+├── deploy/
+│   └── voice-ui.env.example  # Plantilla de entorno de la puerta de enlace local en la CM5
+├── systemd/
+│   └── hydra-umc-voice-ui.service # Unidad systemd del servicio HTTP de voz local en la CM5
+├── tools/
+│   ├── build_test.py         # Comprobación de compilación sin versionado
+│   └── ci_validate.py        # Validación de manifiesto/CHANGELOG/docs usada por CI
 ├── build/                    # Salida de build local (ignorada por git)
-├── pyproject.toml            # Metadatos del paquete (versión 0.0.5, incremento cuentakilómetros)
-├── bump_version.py           # Incremento de versión estilo cuentakilómetros (usado por build.sh/.bat)
+├── pyproject.toml            # Metadatos del paquete (versión con incremento cuentakilómetros)
+├── bump_version.py           # Incremento de versión nativa estilo cuentakilómetros (usado por build.sh/.bat)
+├── bump_manifest_version.py  # Sincroniza la versión de hydra-umc.project.json con la nativa (--sync)
 ├── build.sh / build.bat      # Crea el venv, instala (con extras de dev), verifica la importación, corre tests
 └── run.sh / run.bat          # Ejecuta el punto de entrada (reenvia argumentos, ej. `analyze-audio`)
 ```
