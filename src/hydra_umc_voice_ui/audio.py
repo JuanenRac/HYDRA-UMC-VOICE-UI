@@ -18,6 +18,9 @@ import wave
 from dataclasses import dataclass
 from pathlib import Path
 
+DEFAULT_MAX_WAV_BYTES = 16 * 1024 * 1024
+DEFAULT_MAX_WAV_DURATION_SECONDS = 300.0
+
 
 @dataclass(frozen=True)
 class AudioClip:
@@ -38,18 +41,46 @@ class AudioClip:
         return self.frame_count / self.sample_rate
 
 
-def load_wav(path: Path) -> AudioClip:
-    """Load a real 16-bit PCM WAV file from disk."""
+def load_wav(
+    path: Path,
+    *,
+    max_bytes: int = DEFAULT_MAX_WAV_BYTES,
+    max_duration_seconds: float = DEFAULT_MAX_WAV_DURATION_SECONDS,
+) -> AudioClip:
+    """Load a bounded 16-bit PCM WAV file from disk.
+
+    The v0 front-end deliberately returns an in-memory clip because the VAD
+    operates over it.  Validate its decoded size and duration from the WAV
+    header before reading frames so an accidental recording cannot exhaust a
+    constrained CM5 process.  A future streaming STT front-end can replace
+    this bounded adapter without weakening the input boundary.
+    """
+    if max_bytes <= 0:
+        raise ValueError("max_bytes must be positive")
+    if max_duration_seconds <= 0:
+        raise ValueError("max_duration_seconds must be positive")
     with wave.open(str(path), "rb") as wav_file:
         channels = wav_file.getnchannels()
         sample_rate = wav_file.getframerate()
         sample_width = wav_file.getsampwidth()
-        raw = wav_file.readframes(wav_file.getnframes())
+        frame_count = wav_file.getnframes()
 
     if sample_width != 2:
         raise ValueError(
             f"only 16-bit PCM WAV is supported (got {sample_width * 8}-bit): {path}"
         )
+    if channels <= 0 or sample_rate <= 0:
+        raise ValueError(f"invalid WAV channel/sample rate metadata: {path}")
+
+    duration_seconds = frame_count / sample_rate
+    decoded_bytes = frame_count * channels * sample_width
+    if decoded_bytes > max_bytes:
+        raise ValueError(f"WAV decoded PCM exceeds {max_bytes} bytes: {path}")
+    if duration_seconds > max_duration_seconds:
+        raise ValueError(f"WAV duration exceeds {max_duration_seconds:g} seconds: {path}")
+
+    with wave.open(str(path), "rb") as wav_file:
+        raw = wav_file.readframes(frame_count)
 
     samples = array.array("h")
     samples.frombytes(raw)

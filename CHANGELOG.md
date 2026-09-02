@@ -7,6 +7,10 @@ bumped manually only. See `bump_version.py`.
 
 ## [Unreleased]
 ### Added
+- `audio.load_wav()` now enforces a bounded v0 PCM input contract: 16 MiB of
+  decoded PCM and 300 seconds by default. Header metadata is validated before
+  frame data is read, so a large recording is rejected deterministically
+  instead of consuming an unbounded amount of process memory.
 - `assistant_reply.visualState` - a bounded, additive Watch display hint for
   acknowledgement, clarification, confirmation-required and warning states.
   It never claims live robot state and it never authorizes a physical action.

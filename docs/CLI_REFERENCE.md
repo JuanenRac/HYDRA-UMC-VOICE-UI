@@ -56,6 +56,12 @@ options:
   -h, --help  show this help message and exit
 ```
 
+For the current in-memory v0 front-end, `analyze-audio` accepts only 16-bit
+PCM WAV input up to **16 MiB decoded PCM** and **300 seconds**. The input is
+rejected before samples are read when either limit is exceeded; this keeps the
+local service bounded on CM5-class hardware. This is a deliberate safety limit,
+not a claim that the future streaming STT implementation is already present.
+
 Real WAV loading (sample rate, channels, duration, RMS energy) plus a v0
 energy-gate voice-activity detector. The fixtures below are built with
 the same real WAV-writing approach `tests/test_audio.py` uses for its own

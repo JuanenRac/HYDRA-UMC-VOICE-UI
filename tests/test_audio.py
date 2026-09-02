@@ -9,6 +9,8 @@ import math
 import wave
 from pathlib import Path
 
+import pytest
+
 from hydra_umc_voice_ui.audio import detect_voice_segments, load_wav, rms_energy
 
 SAMPLE_RATE = 8000
@@ -50,6 +52,30 @@ def test_load_wav_reads_real_file(tmp_path: Path) -> None:
     assert clip.channels == 1
     assert clip.frame_count == SAMPLE_RATE
     assert clip.duration_seconds == 1.0
+
+
+def test_load_wav_rejects_declared_pcm_larger_than_limit(tmp_path: Path) -> None:
+    path = tmp_path / "clip.wav"
+    _write_wav(path, _silence(SAMPLE_RATE))
+
+    with pytest.raises(ValueError, match="decoded PCM exceeds 8 bytes"):
+        load_wav(path, max_bytes=8)
+
+
+def test_load_wav_rejects_duration_larger_than_limit(tmp_path: Path) -> None:
+    path = tmp_path / "clip.wav"
+    _write_wav(path, _silence(SAMPLE_RATE))
+
+    with pytest.raises(ValueError, match="duration exceeds 0.5 seconds"):
+        load_wav(path, max_duration_seconds=0.5)
+
+
+def test_load_wav_rejects_invalid_limits_before_opening_file(tmp_path: Path) -> None:
+    missing_path = tmp_path / "missing.wav"
+    with pytest.raises(ValueError, match="max_bytes"):
+        load_wav(missing_path, max_bytes=0)
+    with pytest.raises(ValueError, match="max_duration_seconds"):
+        load_wav(missing_path, max_duration_seconds=0)
 
 
 def test_rms_energy_of_silence_is_zero() -> None:
