@@ -118,7 +118,7 @@ run.bat
 実行します（`pytest tests/`）。引数なしの `run.sh` の予期される出力：
 
 ```text
-HYDRA-UMC-VOICE-UI v0.0.5
+HYDRA-UMC-VOICE-UI v0.1.0
 Voice UI (Hailo-10) - local STT/TTS pipeline for hands-free robotic mission control.
 ```
 

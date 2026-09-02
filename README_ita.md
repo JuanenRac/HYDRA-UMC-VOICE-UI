@@ -172,7 +172,7 @@ suite di test (`pytest tests/`). Output atteso di un `run.sh` senza
 argomenti:
 
 ```text
-HYDRA-UMC-VOICE-UI v0.0.5
+HYDRA-UMC-VOICE-UI v0.1.0
 Voice UI (Hailo-10) - local STT/TTS pipeline for hands-free robotic mission control.
 ```
 

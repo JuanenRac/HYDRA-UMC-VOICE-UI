@@ -114,7 +114,7 @@ run.bat
 `run.sh` 的预期输出：
 
 ```text
-HYDRA-UMC-VOICE-UI v0.0.5
+HYDRA-UMC-VOICE-UI v0.1.0
 Voice UI (Hailo-10) - local STT/TTS pipeline for hands-free robotic mission control.
 ```
 
