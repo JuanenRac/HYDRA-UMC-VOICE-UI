@@ -147,6 +147,7 @@ HYDRA-UMC-VOICE-UI/
 ├── bump_version.py           # Incremento de versión nativa estilo cuentakilómetros (usado por build.sh/.bat)
 ├── bump_manifest_version.py  # Sincroniza la versión de hydra-umc.project.json con la nativa (--sync)
 ├── build.sh / build.bat      # Crea el venv, instala (con extras de dev), verifica la importación, corre tests
+├── build-test.sh / build-test.bat # Envoltorio no-mutante para tools/build_test.py (no toca version/manifest/CHANGELOG)
 └── run.sh / run.bat          # Ejecuta el punto de entrada (reenvia argumentos, ej. `analyze-audio`)
 ```
 
@@ -224,11 +225,13 @@ El desarrollo en loopback puede ejecutarse sin token. Una escucha fuera de loopb
 Una transcripción que realmente coincide con más de un comando conocido se rechaza con una respuesta real y distinta en vez de resolverse en silencio a una sola interpretación:
 
 ```json
-{"transcript": "stop the status check"}
-// -> {"text": "That request matched more than one action (status, stop). Please rephrase it more specifically.", "requiresConfirmation": false, "intent": null}
+// POST /v1/voice/turn
+{"type": "voice_turn", "requestId": "watch-voice-001", "transcript": "stop the status check", "locale": "en-US"}
+
+// -> {"type":"assistant_reply","requestId":"watch-voice-001","text":"That request matched more than one action (status, stop). Please rephrase it more specifically.","level":"ATTENTION","speak":true,"requiresConfirmation":false,"visualState":"clarification"}
 ```
 
-Consulta [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) para el contrato de petición y el límite de despliegue.
+Consulta [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) para el contrato de petición completo y el límite de despliegue, y [CLI_REFERENCE.md](docs/CLI_REFERENCE.md) para cada ejemplo real de `analyze-audio`/`parse-intent`/`serve` capturado desde el CLI instalado.
 
 ## 🚀 HOJA DE RUTA
 * **Fase 1:** Despliegue del motor VLA y procesamiento de entrada multi-modal en Hailo-10.

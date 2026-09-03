@@ -93,6 +93,7 @@ HYDRA-UMC-VOICE-UI/
 ├── bump_version.py           # 原生版本的里程表式递增（由 build.sh/.bat 使用）
 ├── bump_manifest_version.py  # 将 hydra-umc.project.json 的版本与原生版本同步(--sync)
 ├── build.sh / build.bat      # 创建 venv、安装（含 dev 附加依赖）、验证导入、运行测试
+├── build-test.sh / build-test.bat # tools/build_test.py 的非破坏性包装脚本（不改动版本号/manifest/CHANGELOG）
 └── run.sh / run.bat          # 运行入口点（转发参数，例如 `analyze-audio`）
 ```
 
@@ -156,11 +157,13 @@ run.bat parse-intent "status of robot 3"
 一段真正同时匹配多个已知命令的转录文本会被拒绝，并返回一个真实、明确区分的回复，而不是被悄悄地解析为单一的理解结果：
 
 ```json
-{"transcript": "stop the status check"}
-// -> {"text": "That request matched more than one action (status, stop). Please rephrase it more specifically.", "requiresConfirmation": false, "intent": null}
+// POST /v1/voice/turn
+{"type": "voice_turn", "requestId": "watch-voice-001", "transcript": "stop the status check", "locale": "en-US"}
+
+// -> {"type":"assistant_reply","requestId":"watch-voice-001","text":"That request matched more than one action (status, stop). Please rephrase it more specifically.","level":"ATTENTION","speak":true,"requiresConfirmation":false,"visualState":"clarification"}
 ```
 
-请求协议和部署边界请参阅 [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md)。
+完整的请求协议和部署边界请参阅 [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md)，从已安装CLI真实捕获的每个 `analyze-audio`/`parse-intent`/`serve` 示例请参阅 [CLI_REFERENCE.md](docs/CLI_REFERENCE.md)。
 
 ## 🚀 路线图
 * **第一阶段：** 在 Hailo-10 上部署 VLA 引擎并进行多模态输入处理。

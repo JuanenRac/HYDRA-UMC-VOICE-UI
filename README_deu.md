@@ -150,6 +150,7 @@ HYDRA-UMC-VOICE-UI/
 ├── bump_version.py           # Native Versionserhöhung im Kilometerzähler-Stil (von build.sh/.bat verwendet)
 ├── bump_manifest_version.py  # Synchronisiert die Version von hydra-umc.project.json mit der nativen (--sync)
 ├── build.sh / build.bat      # Erstellt das venv, installiert (mit Dev-Extras), prüft den Import, führt Tests aus
+├── build-test.sh / build-test.bat # Nicht-mutierender Wrapper für tools/build_test.py (ändert weder Version noch Manifest noch CHANGELOG)
 └── run.sh / run.bat          # Führt den Einstiegspunkt aus (leitet Argumente weiter, z. B. `analyze-audio`)
 ```
 
@@ -229,11 +230,13 @@ Die Loopback-Entwicklung kann ohne Token laufen. Eine Bindung außerhalb von Loo
 Eine Transkription, die wirklich zu mehr als einem bekannten Befehl passt, wird mit einer echten, eindeutigen Antwort abgelehnt, statt stillschweigend zu einer Interpretation aufgelöst zu werden:
 
 ```json
-{"transcript": "stop the status check"}
-// -> {"text": "That request matched more than one action (status, stop). Please rephrase it more specifically.", "requiresConfirmation": false, "intent": null}
+// POST /v1/voice/turn
+{"type": "voice_turn", "requestId": "watch-voice-001", "transcript": "stop the status check", "locale": "en-US"}
+
+// -> {"type":"assistant_reply","requestId":"watch-voice-001","text":"That request matched more than one action (status, stop). Please rephrase it more specifically.","level":"ATTENTION","speak":true,"requiresConfirmation":false,"visualState":"clarification"}
 ```
 
-Siehe [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) für den Request-Vertrag und die Bereitstellungsgrenze.
+Siehe [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) für den vollständigen Request-Vertrag und die Bereitstellungsgrenze, und [CLI_REFERENCE.md](docs/CLI_REFERENCE.md) für jedes reale `analyze-audio`/`parse-intent`/`serve`-Beispiel, aufgezeichnet vom installierten CLI.
 
 ## 🚀 FAHRPLAN
 * **Phase 1:** VLA-Engine-Bereitstellung und multimodale Eingabeverarbeitung auf Hailo-10.

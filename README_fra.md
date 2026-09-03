@@ -150,6 +150,7 @@ HYDRA-UMC-VOICE-UI/
 ├── bump_version.py           # Incrément de version native type compteur kilométrique (utilisé par build.sh/.bat)
 ├── bump_manifest_version.py  # Synchronise la version de hydra-umc.project.json avec la version native (--sync)
 ├── build.sh / build.bat      # Crée le venv, installe (avec extras dev), vérifie l'import, exécute les tests
+├── build-test.sh / build-test.bat # Wrapper non-mutant pour tools/build_test.py (ne touche pas à version/manifest/CHANGELOG)
 └── run.sh / run.bat          # Exécute le point d'entrée (transmet les arguments, ex. `analyze-audio`)
 ```
 
@@ -230,11 +231,13 @@ Le développement en loopback peut fonctionner sans jeton. Une écoute hors loop
 Une transcription qui correspond réellement à plus d'une commande connue est rejetée avec une réponse réelle et distincte au lieu d'être résolue silencieusement vers une seule interprétation :
 
 ```json
-{"transcript": "stop the status check"}
-// -> {"text": "That request matched more than one action (status, stop). Please rephrase it more specifically.", "requiresConfirmation": false, "intent": null}
+// POST /v1/voice/turn
+{"type": "voice_turn", "requestId": "watch-voice-001", "transcript": "stop the status check", "locale": "en-US"}
+
+// -> {"type":"assistant_reply","requestId":"watch-voice-001","text":"That request matched more than one action (status, stop). Please rephrase it more specifically.","level":"ATTENTION","speak":true,"requiresConfirmation":false,"visualState":"clarification"}
 ```
 
-Consultez [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) pour le contrat de requête et la limite de déploiement.
+Consultez [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) pour le contrat de requête complet et la limite de déploiement, et [CLI_REFERENCE.md](docs/CLI_REFERENCE.md) pour chaque exemple réel `analyze-audio`/`parse-intent`/`serve` capturé depuis le CLI installé.
 
 ## 🚀 FEUILLE DE ROUTE
 * **Phase 1 :** Déploiement du moteur VLA et traitement des entrées multimodales sur Hailo-10.

@@ -96,6 +96,7 @@ HYDRA-UMC-VOICE-UI/
 ├── bump_version.py           # ネイティブバージョンのオドメーター式インクリメント（build.sh/.bat が使用）
 ├── bump_manifest_version.py  # hydra-umc.project.json のバージョンをネイティブ版と同期(--sync)
 ├── build.sh / build.bat      # venv 作成、インストール（dev エクストラ付き）、インポート検証、テスト実行
+├── build-test.sh / build-test.bat # tools/build_test.py の非破壊ラッパー（バージョン/マニフェスト/CHANGELOGは変更しない）
 └── run.sh / run.bat          # エントリポイントを実行（引数を転送、例：`analyze-audio`）
 ```
 
@@ -161,11 +162,13 @@ run.bat parse-intent "status of robot 3"
 複数の既知コマンドに本当に一致する文字起こしは、単一の解釈へ黙って解決されるのではなく、実在の、明確に区別される応答とともに拒否されます：
 
 ```json
-{"transcript": "stop the status check"}
-// -> {"text": "That request matched more than one action (status, stop). Please rephrase it more specifically.", "requiresConfirmation": false, "intent": null}
+// POST /v1/voice/turn
+{"type": "voice_turn", "requestId": "watch-voice-001", "transcript": "stop the status check", "locale": "en-US"}
+
+// -> {"type":"assistant_reply","requestId":"watch-voice-001","text":"That request matched more than one action (status, stop). Please rephrase it more specifically.","level":"ATTENTION","speak":true,"requiresConfirmation":false,"visualState":"clarification"}
 ```
 
-リクエスト契約とデプロイ境界については [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) を参照してください。
+完全なリクエスト契約とデプロイ境界については [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) を、インストール済みCLIから実際に取得した `analyze-audio`/`parse-intent`/`serve` の全実例については [CLI_REFERENCE.md](docs/CLI_REFERENCE.md) を参照してください。
 
 ## 🚀 ロードマップ
 * **フェーズ 1：** Hailo-10 上での VLA エンジンのデプロイとマルチモーダル入力処理。
