@@ -5,7 +5,23 @@ version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
 bumped manually only. See `bump_version.py`.
 
-## [Unreleased]
+## [0.1.1] - Fixed a real entity-dropping bug in the ambiguity-aware classifier
+
+- **Real bug fixed in `intent.py`**: `normalize_text()` stripped "robot" as
+  a filler word before `classify_intent()` (the ambiguity-aware path
+  `gateway.py`'s `process_voice_turn()` actually calls in production)
+  matched its rules. The STATUS rule's own pattern requires the literal
+  word "robot" to capture `robot_id` ("status of robot 3") - stripping it
+  first silently destroyed that entity: `classify_intent("status of robot
+  42")` returned `entities={}` where the legacy `parse_intent()` (which
+  never normalizes) still correctly returned `{"robot_id": "42"}`. A real
+  Watch user asking "what is the status of robot 42" got a STATUS reply
+  that no longer said which robot. No rule pattern needs "robot" stripped
+  to match - every rule already searches rather than requires an exact
+  match, so a vocative "hey robot, stop" still classifies correctly with
+  "robot" left in. New regression tests in `test_intent.py`/
+  `test_gateway.py`; the existing `test_status_turn_...` gateway test
+  never asserted on `entities`/reply text, so this shipped untested.
 ### Added
 - `audio.load_wav()` now enforces a bounded v0 PCM input contract: 16 MiB of
   decoded PCM and 300 seconds by default. Header metadata is validated before

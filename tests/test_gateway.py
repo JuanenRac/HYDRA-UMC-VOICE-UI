@@ -27,8 +27,10 @@ def test_status_turn_preserves_request_id_and_never_claims_live_data() -> None:
     assert reply.request_id == "watch-voice-001"
     assert reply.intent is not None
     assert reply.intent.name == "status"
+    assert reply.intent.entities == {"robot_id": "3"}
     assert reply.requires_confirmation is False
     assert "Live telemetry will be supplied" in reply.text
+    assert "for robot 3" in reply.text
     assert reply.to_payload()["visualState"] == "acknowledged"
 
 

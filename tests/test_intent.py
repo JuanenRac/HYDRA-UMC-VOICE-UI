@@ -108,3 +108,27 @@ def test_classify_normalizes_before_matching() -> None:
 
     assert classification.is_unambiguous
     assert classification.matches[0].name == INTENT_STOP
+
+
+def test_classify_status_preserves_robot_id_entity() -> None:
+    # Real regression: normalize_text() used to strip "robot" as a filler
+    # word, so classify_intent (the ambiguity-aware path gateway.py's
+    # process_voice_turn actually calls) silently dropped the robot_id
+    # entity that parse_intent() still captured correctly - "status of
+    # robot 42" was recognized as STATUS but the caller could no longer
+    # tell which robot was asked about.
+    classification = classify_intent("what is the status of robot 42")
+
+    assert classification.is_unambiguous
+    assert classification.matches[0].name == INTENT_STATUS
+    assert classification.matches[0].entities == {"robot_id": "42"}
+
+
+def test_classify_still_matches_vocative_robot_address() -> None:
+    # "robot" used as an address ("hey robot, ...") never needed stripping
+    # to match - every rule pattern already searches rather than requires
+    # an exact match, so leaving "robot" unstripped changes nothing here.
+    classification = classify_intent("hey robot, could you stop")
+
+    assert classification.is_unambiguous
+    assert classification.matches[0].name == INTENT_STOP

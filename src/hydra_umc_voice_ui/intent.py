@@ -59,7 +59,15 @@ def parse_intent(text: str) -> Intent | None:
     return None
 
 
-_FILLER_WORDS = re.compile(r"\b(please|kindly|could you|can you|would you|robot|hey)\b", re.IGNORECASE)
+# "robot" is deliberately NOT stripped here even though it reads like an
+# address/vocative filler ("hey robot, ...") - the STATUS rule's own
+# pattern requires the literal word "robot" to capture robot_id ("status
+# of robot 3"), and every rule below already tolerates a leading/trailing
+# "robot" via .search() without stripping it. Stripping it used to silently
+# destroy the robot_id entity: classify_intent("status of robot 42") lost
+# entities={} where parse_intent() (which never normalizes) still returned
+# {"robot_id": "42"} - a real regression only classify_intent's callers hit.
+_FILLER_WORDS = re.compile(r"\b(please|kindly|could you|can you|would you|hey)\b", re.IGNORECASE)
 _PUNCTUATION_NOISE = re.compile(r"[!?.,;:]+")
 _WHITESPACE = re.compile(r"\s+")
 
