@@ -89,6 +89,7 @@ HYDRA-UMC-VOICE-UI/
 │   ├── build_test.py         # 不递增版本号的构建检查
 │   └── ci_validate.py        # CI 使用的清单/CHANGELOG/文档校验
 ├── build/                    # 本地构建输出（已被 git 忽略）
+├── Dockerfile                # 用于经认证 HTTP 网关的最小容器镜像（非 root）
 ├── pyproject.toml            # 包元数据（里程表式递增版本号）
 ├── bump_version.py           # 原生版本的里程表式递增（由 build.sh/.bat 使用）
 ├── bump_manifest_version.py  # 将 hydra-umc.project.json 的版本与原生版本同步(--sync)

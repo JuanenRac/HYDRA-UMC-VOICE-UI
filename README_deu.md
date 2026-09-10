@@ -146,6 +146,7 @@ HYDRA-UMC-VOICE-UI/
 │   ├── build_test.py         # Nicht-versionierender Build-Check
 │   └── ci_validate.py        # Manifest/CHANGELOG/Docs-Validierung, von CI genutzt
 ├── build/                    # Lokale Build-Ausgabe (von git ignoriert)
+├── Dockerfile                # Minimales Container-Image für das authentifizierte HTTP-Gateway (non-root)
 ├── pyproject.toml            # Paket-Metadaten (Version per Kilometerzähler-Inkrement)
 ├── bump_version.py           # Native Versionserhöhung im Kilometerzähler-Stil (von build.sh/.bat verwendet)
 ├── bump_manifest_version.py  # Synchronisiert die Version von hydra-umc.project.json mit der nativen (--sync)
