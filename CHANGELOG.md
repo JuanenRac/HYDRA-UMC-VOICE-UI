@@ -7,8 +7,8 @@ bumped manually only. See `bump_version.py`.
 
 ## Unreleased - Real Dockerfile
 
-- **New `tests/test_http_service.py`** (18 tests) - found in an
-  ecosystem-wide software-improvements audit: `http_service.py` - the
+- **New `tests/test_http_service.py`** (18 tests) - found during a
+  code-quality review: `http_service.py` - the
   real authenticated Watch HTTP gateway (bearer-token check, body-size
   limiting, error mapping) - had zero dedicated test coverage, unlike
   every other module in this repo, and the one related CLI test only
@@ -135,7 +135,7 @@ bumped manually only. See `bump_version.py`.
   the CM5 systemd (`Restart=on-failure`) logs instead of a diagnosable
   error. Now caught alongside the existing `ValueError` handling and
   reported the same way.
-- Both were found in a live ecosystem bug audit, not from a user report.
+- Both were found during internal testing, not from a user report.
 
 ### Added
 - 2 new regression tests (`test_cli.py`) = 32 total: `analyze-audio`
