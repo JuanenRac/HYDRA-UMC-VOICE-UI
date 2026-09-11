@@ -14,6 +14,8 @@
   <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Hailo-10">
 </p>
 
+**Honesty check - what actually runs today:** the WAV loading and energy-gate voice-activity detection (`audio.py`), the rule-based intent/entity parser and its ambiguity-aware `classify_intent()` (`intent.py`), the bounded confirmation-gated text-to-intent gateway (`gateway.py`), and the authenticated HTTP boundary for the Watch relay (`http_service.py`) are real and tested - 56 passing tests (`pytest tests/`), including a real end-to-end suite against a live `VoiceGatewayServer` (token required/accepted/rejected, a real `POST /v1/voice/turn` round trip, malformed/oversized bodies, a genuinely missing `Content-Length`). None of this needs a microphone, a Whisper model, or a Hailo-10 NPU to run or test - `analyze-audio`/`parse-intent`/`serve` all work today against a WAV file or already-transcribed text. The new `Dockerfile` reuses the same CLI flags already verified live on the real CM5 systemd unit, but has not itself been build-tested - there's no Docker runtime on this development machine. The actual Whisper STT and neural TTS pipeline this README's own roadmap describes is still pure aspiration: no speech-recognition or speech-synthesis model has been integrated, and this environment has no physical Hailo-10 module to run one on. See `CHANGELOG.md` for exactly what has shipped so far, and section 1's own feature list below for the per-feature real/future breakdown.
+
 ---
 
 ## 1. 🛠️ TECHNICAL OVERVIEW
@@ -69,11 +71,15 @@ service into `docker-compose.yml` alongside its three siblings
   (`hydra_umc_voice_ui`) separate from repo-root tooling
   (`bump_version.py`), matching the layout used by every other Python
   project across the ecosystem.
-* **Why the entry point only prints identity/version/role today.** This
-  is the andamiaje (scaffolding) stage: proving the package installs,
-  compiles and imports cleanly - on the actual target Python version - is
-  a prerequisite for adding real STT/TTS pipeline logic later, and keeps
-  that later work isolated from packaging concerns.
+* **Why bare invocation only prints identity/version/role.** That stays
+  a thin, unchanged scaffolding check; the real v0 work lives behind its
+  subcommands instead - `analyze-audio` (real WAV loading + energy-gate
+  VAD, `audio.py`), `parse-intent` (real rule-based intent/entity
+  parsing, `intent.py`), and `serve` (the real authenticated Watch
+  voice-turn gateway, `http_service.py`/`gateway.py`). None of that is
+  the Whisper STT / neural TTS pipeline this README's own roadmap
+  describes - that still needs a real model dependency this environment
+  doesn't have.
 * **How this fits the rest of the ecosystem.** This service is the
   hands-free entry point into the whole Cognitive AI Node: recognized
   intent flows to its sibling HYDRA-UMC-SEMANTIC-PLANNER, and it acts as

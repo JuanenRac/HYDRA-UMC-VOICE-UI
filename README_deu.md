@@ -14,6 +14,8 @@
   <img src="https://img.shields.io/badge/Plattform-Hailo--10-green.svg" alt="Hailo-10">
 </p>
 
+**Ehrlichkeitscheck - was heute wirklich funktioniert:** das WAV-Laden und die Energie-Schwellen-Sprachaktivitätserkennung (`audio.py`), der regelbasierte Intent-/Entitätsparser mit seinem mehrdeutigkeitsbewussten `classify_intent()` (`intent.py`), das begrenzte, bestätigungsgesteuerte Text-zu-Intent-Gateway (`gateway.py`), und die authentifizierte HTTP-Grenze für das Watch-Relais (`http_service.py`) sind real und getestet - 56 bestandene Tests (`pytest tests/`), einschließlich einer echten End-to-End-Suite gegen einen laufenden `VoiceGatewayServer` (Token erforderlich/akzeptiert/abgelehnt, ein echter `POST /v1/voice/turn`-Round-Trip, fehlerhafte/übergroße Bodies, ein tatsächlich fehlender `Content-Length`). Nichts davon braucht ein Mikrofon, ein Whisper-Modell oder eine Hailo-10-NPU, um zu laufen oder getestet zu werden - `analyze-audio`/`parse-intent`/`serve` funktionieren schon heute mit einer WAV-Datei oder bereits transkribiertem Text. Das neue `Dockerfile` verwendet dieselben CLI-Flags, die bereits live auf der echten CM5-systemd-Unit verifiziert wurden, wurde aber selbst nicht build-getestet - diese Entwicklungsmaschine hat keine Docker-Laufzeitumgebung. Die echte Whisper-STT- und Neural-TTS-Pipeline, die die eigene Roadmap dieses READMEs beschreibt, bleibt reine Zukunftsmusik: es wurde kein Spracherkennungs- oder Sprachsynthese-Modell integriert, und diese Umgebung hat kein physisches Hailo-10-Modul, um eines auszuführen. Siehe `CHANGELOG.md` für das, was bisher genau ausgeliefert wurde, und die eigene Feature-Liste in Abschnitt 1 weiter unten für die reale/zukünftige Aufschlüsselung pro Funktion.
+
 ---
 
 ## 1. 🛠️ TECHNISCHER ÜBERBLICK
@@ -70,12 +72,15 @@ ein:
 * **Warum ein `src/`-Layout.** Trennt das installierbare Paket
   (`hydra_umc_voice_ui`) vom Tooling im Repo-Root (`bump_version.py`)
   und entspricht dem Layout aller anderen Python-Projekte im Ökosystem.
-* **Warum der Einstiegspunkt heute nur Identität/Version/Rolle
-  ausgibt.** Dies ist die Andamiaje- (Gerüst-) Phase: zu beweisen, dass
-  sich das Paket auf der tatsächlichen Ziel-Python-Version sauber
-  installieren, kompilieren und importieren lässt, ist Voraussetzung,
-  bevor echte STT/TTS-Pipeline-Logik hinzugefügt wird, und hält diese
-  spätere Arbeit von Packaging-Fragen getrennt.
+* **Warum die nackte Ausführung nur Identität/Version/Rolle ausgibt.**
+  Das bleibt eine dünne, unveränderte Gerüstprüfung; die echte
+  v0-Arbeit steckt hinter ihren Unterbefehlen: `analyze-audio` (echtes
+  WAV-Laden + Energie-Schwellen-VAD, `audio.py`), `parse-intent` (echte
+  regelbasierte Intent-/Entitätsanalyse, `intent.py`), und `serve` (das
+  echte authentifizierte Watch-Voice-Turn-Gateway, `http_service.py`/
+  `gateway.py`). Nichts davon ist die Whisper-STT-/Neural-TTS-Pipeline,
+  die die eigene Roadmap dieses READMEs beschreibt - das braucht
+  weiterhin eine echte Modellabhängigkeit, die diese Umgebung nicht hat.
 * **Wie sich das in den Rest des Ökosystems einfügt.** Dieser Dienst ist
   der freihändige Einstiegspunkt in den gesamten Cognitive AI Node:
   erkannte Absicht fließt zu seinem Geschwister
