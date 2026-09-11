@@ -4,8 +4,8 @@
 # GPL-3.0 - see LICENSE
 # =============================================================================
 """Real end-to-end HTTP tests for the authenticated Watch voice gateway
-(http_service.py) - found in an ecosystem-wide software-improvements
-audit: this module (bearer-token check, body-size limiting, error
+(http_service.py) - found while auditing the code: this module
+(bearer-token check, body-size limiting, error
 mapping) had zero dedicated test coverage, unlike every other module in
 this repo, and the one related CLI test only covered "port already in
 use", not real request/response behavior. A real VoiceGatewayServer
