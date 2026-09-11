@@ -14,6 +14,8 @@
   <img src="https://img.shields.io/badge/Piattaforma-Hailo--10-green.svg" alt="Hailo-10">
 </p>
 
+**Verifica di onestà - cosa funziona davvero oggi:** il caricamento WAV e il rilevamento dell'attività vocale a soglia di energia (`audio.py`), il parser di intenti/entità basato su regole e il suo `classify_intent()` consapevole dell'ambiguità (`intent.py`), il gateway testo-intento limitato e con conferma (`gateway.py`), e il confine HTTP autenticato per il relay del Watch (`http_service.py`) sono reali e testati - 56 test superati (`pytest tests/`), inclusa una vera suite end-to-end contro un `VoiceGatewayServer` live (token richiesto/accettato/rifiutato, un vero round trip `POST /v1/voice/turn`, corpi malformati/sovradimensionati, un `Content-Length` genuinamente assente). Niente di tutto ciò richiede un microfono, un modello Whisper o un NPU Hailo-10 per essere eseguito o testato - `analyze-audio`/`parse-intent`/`serve` funzionano già oggi su un file WAV o testo già trascritto. Il nuovo `Dockerfile` riutilizza gli stessi flag CLI già verificati dal vivo sulla vera unità systemd della CM5, ma non è stato testato in build di per sé - questa macchina di sviluppo non ha un runtime Docker. La vera pipeline Whisper STT e TTS neurale che la roadmap di questo README descrive resta pura aspirazione: non è stato integrato nessun modello di riconoscimento o sintesi vocale, e questo ambiente non ha un modulo Hailo-10 fisico su cui eseguirne uno. Vedi `CHANGELOG.md` per sapere esattamente cosa è stato consegnato finora, e l'elenco delle funzionalità della sezione 1 più sotto per il dettaglio reale/futuro per funzionalità.
+
 ---
 
 ## 1. 🛠️ PANORAMICA TECNICA
@@ -70,13 +72,16 @@ fratelli (VLA-Engine, Semantic-Planner, Docs-QA):
   (`hydra_umc_voice_ui`) separato dal tooling nella radice del repo
   (`bump_version.py`), coerentemente con il resto dei progetti Python
   dell'ecosistema.
-* **Perché il punto di ingresso oggi si limita a stampare
-  identità/versione/ruolo.** Questa è la fase di andamiaje
-  (impalcatura): dimostrare che il pacchetto si installa, compila e
-  importa correttamente - sulla versione Python reale di destinazione -
-  è un prerequisito prima di aggiungere la vera logica della pipeline
-  STT/TTS, e mantiene quel lavoro successivo isolato dalle questioni di
-  packaging.
+* **Perché l'invocazione nuda si limita a stampare
+  identità/versione/ruolo.** Questo resta un controllo di impalcatura
+  leggero e invariato; il vero lavoro v0 vive dietro i suoi sottocomandi:
+  `analyze-audio` (vero caricamento WAV + rilevamento dell'attività
+  vocale a soglia di energia, `audio.py`), `parse-intent` (vera analisi
+  di intenti/entità basata su regole, `intent.py`), e `serve` (il vero
+  gateway autenticato dei turni vocali per il Watch, `http_service.py`/
+  `gateway.py`). Niente di tutto ciò è la pipeline Whisper STT / TTS
+  neurale che la roadmap di questo README descrive - quella richiede
+  ancora una vera dipendenza da modello che questo ambiente non ha.
 * **Come si inserisce nel resto dell'ecosistema.** Questo servizio è il
   punto di ingresso a mani libere per l'intero Cognitive AI Node:
   l'intento riconosciuto fluisce verso il suo fratello

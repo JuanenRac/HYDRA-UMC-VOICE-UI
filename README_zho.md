@@ -14,6 +14,8 @@
   <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Hailo-10">
 </p>
 
+**诚实核查 - 今天真正能运行的部分：** WAV 加载与基于能量阈值的语音活动检测（`audio.py`）、基于规则的意图/实体解析器及其具备歧义感知能力的 `classify_intent()`（`intent.py`）、受限且需要确认的文本到意图网关（`gateway.py`），以及面向 Watch 中继的经过认证的 HTTP 边界（`http_service.py`）都是真实且经过测试的——56 个通过的测试（`pytest tests/`），包括针对一个真实运行中的 `VoiceGatewayServer` 的端到端测试套件（令牌的必需/接受/拒绝、真实的 `POST /v1/voice/turn` 往返、格式错误/超大的请求体，以及真正缺失的 `Content-Length`）。这些功能都不需要麦克风、Whisper 模型或 Hailo-10 NPU 就能运行或测试——`analyze-audio`/`parse-intent`/`serve` 如今都能针对一个 WAV 文件或已转写的文本正常工作。新增的 `Dockerfile` 复用了已经在真实 CM5 systemd 单元上验证过的相同 CLI 参数，但其本身尚未经过构建测试——这台开发机器上没有 Docker 运行时。本 README 自己路线图中描述的真正的 Whisper STT 与神经网络 TTS 流水线仍然完全是愿景：目前尚未集成任何语音识别或语音合成模型，而且这个环境也没有可以运行它的实体 Hailo-10 模块。具体已经交付了什么，请参见 `CHANGELOG.md`，以及下文第 1 节自己的功能列表中按功能划分的真实/未来对照。
+
 ---
 
 ## 1. 🛠️ 技术概述
@@ -58,7 +60,7 @@ flowchart LR
 
 * **为何本子项目没有自己的硬件/固件/`os/`/`models/`。** 它完全运行在父项目已拥有的 CM5 + Hailo-10 M.2 模块上——将模型权重和 HydraOS 镜像集中保存在一处，可避免整个项目族中出现四份互不一致的、动辄数 GB 的副本。
 * **为何采用 `src/` 布局。** 使可安装的包（`hydra_umc_voice_ui`）与仓库根目录的工具（`bump_version.py`）分离，与生态系统中其他每个 Python 项目所使用的布局保持一致。
-* **为何入口点今天只打印身份/版本/角色。** 这是脚手架（scaffolding）阶段：证明该包在实际目标 Python 版本上能够正确安装、编译并被导入，是后续添加真正的 STT/TTS 流水线逻辑的前提条件，并使那部分后续工作与打包相关的问题相互隔离。
+* **为何裸调用今天仍然只打印身份/版本/角色。** 这仍然只是一个轻量、未变的脚手架检查；真正的 v0 工作都在它的子命令背后：`analyze-audio`（真实的 WAV 加载 + 基于能量阈值的语音活动检测，`audio.py`）、`parse-intent`（真实的基于规则的意图/实体解析，`intent.py`），以及 `serve`（面向 Watch 的真实、经过认证的语音轮次网关，`http_service.py`/`gateway.py`）。这些都还不是本 README 自己路线图中描述的 Whisper STT / 神经网络 TTS 流水线——那仍然需要一个这个环境里没有的真实模型依赖。
 * **这如何融入生态系统的其余部分。** 本服务是进入整个 Cognitive AI Node 的免提入口点：识别出的意图流向其同级项目 HYDRA-UMC-SEMANTIC-PLANNER，并与 HYDRA-UMC-STUDIO 和 HYDRA-UMC-DSI 一同充当语音控制界面。
 * **为何 `audio.py` 使用 `wave`/`array` 而非 numpy。** 16 位 PCM 解码和真实的能量阈值 VAD 除了标准库已经提供的之外，不需要任何东西——让 v0 保持零依赖，意味着真实的音频前端可以在任何运行 Python 的地方工作，甚至在安装任何 Hailo-10 专用 STT 依赖之前就能运行。
 * **为何 `intent.py` 是真实的正则规则，而非经过训练的 NLU 模型。** 一个小型真实的命令词汇表（start/stop/status/go home）如今已被规则完全且诚实地覆盖——这与兄弟项目 HYDRA-UMC-DOCS-QA 使用真实 TF-IDF 索引而非嵌入模型的理由相同：一个真实的、可测试的内核，未来基于 ML 的分类器可以在识别出的语音需要覆盖超出这个 v0 词汇表的内容时，在同一个 `parse_intent()` 契约背后替换它。

@@ -14,6 +14,8 @@
   <img src="https://img.shields.io/badge/Plateforme-Hailo--10-green.svg" alt="Hailo-10">
 </p>
 
+**Vérification d'honnêteté - ce qui fonctionne réellement aujourd'hui :** le chargement WAV et la détection d'activité vocale par seuil d'énergie (`audio.py`), l'analyseur d'intention/entité basé sur des règles et son `classify_intent()` conscient de l'ambiguïté (`intent.py`), la passerelle texte-vers-intention bornée et confirmée (`gateway.py`), et la frontière HTTP authentifiée pour le relais du Watch (`http_service.py`) sont réels et testés - 56 tests qui passent (`pytest tests/`), y compris une vraie suite de bout en bout contre un `VoiceGatewayServer` en direct (jeton requis/accepté/rejeté, un vrai aller-retour `POST /v1/voice/turn`, des corps malformés/surdimensionnés, un `Content-Length` réellement absent). Rien de tout cela n'a besoin d'un microphone, d'un modèle Whisper ou d'un NPU Hailo-10 pour tourner ou être testé - `analyze-audio`/`parse-intent`/`serve` fonctionnent déjà aujourd'hui sur un fichier WAV ou un texte déjà transcrit. Le nouveau `Dockerfile` réutilise les mêmes options CLI déjà vérifiées en direct sur la vraie unité systemd du CM5, mais n'a pas été testé en build lui-même - cette machine de développement n'a pas de runtime Docker. Le vrai pipeline Whisper STT et TTS neuronal que la feuille de route de ce README décrit reste de la pure aspiration : aucun modèle de reconnaissance ou de synthèse vocale n'a été intégré, et cet environnement n'a pas de module Hailo-10 physique pour en exécuter un. Voir `CHANGELOG.md` pour savoir exactement ce qui a été livré jusqu'à présent, et la propre liste de fonctionnalités de la section 1 ci-dessous pour le détail réel/futur par fonctionnalité.
+
 ---
 
 ## 1. 🛠️ APERÇU TECHNIQUE
@@ -70,12 +72,17 @@ frères (VLA-Engine, Semantic-Planner, Docs-QA) :
   (`hydra_umc_voice_ui`) de l'outillage à la racine du dépôt
   (`bump_version.py`), conformément au reste des projets Python de
   l'écosystème.
-* **Pourquoi le point d'entrée se contente d'afficher
-  identité/version/rôle aujourd'hui.** C'est l'étape d'échafaudage :
-  prouver que le paquet s'installe, se compile et s'importe correctement
-  - sur la version Python cible réelle - est un prérequis avant d'ajouter
-  une vraie logique de pipeline STT/TTS, et isole ce travail ultérieur
-  des préoccupations d'empaquetage.
+* **Pourquoi l'invocation nue se contente d'afficher
+  identité/version/rôle.** Cela reste une vérification d'échafaudage
+  légère et inchangée ; le vrai travail v0 se trouve derrière ses
+  sous-commandes : `analyze-audio` (vrai chargement WAV + détection
+  d'activité vocale par seuil d'énergie, `audio.py`), `parse-intent`
+  (vraie analyse d'intention/entité basée sur des règles, `intent.py`),
+  et `serve` (la vraie passerelle authentifiée de tours de voix pour le
+  Watch, `http_service.py`/`gateway.py`). Rien de tout cela n'est le
+  pipeline Whisper STT / TTS neuronal que la feuille de route de ce
+  README décrit elle-même - cela nécessite encore une vraie dépendance de
+  modèle que cet environnement n'a pas.
 * **Comment cela s'intègre dans le reste de l'écosystème.** Ce service
   est le point d'entrée mains libres de tout le Cognitive AI Node :
   l'intention reconnue circule vers son frère
