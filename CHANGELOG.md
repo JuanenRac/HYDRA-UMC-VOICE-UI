@@ -5,8 +5,26 @@ version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
 bumped manually only. See `bump_version.py`.
 
-## Unreleased - Real Dockerfile
+## [0.1.2] - I37: bounded confirmation validity, and a real Dockerfile
 
+- **I37 ("Diálogo de confirmación con vigencia y resultado separado")** -
+  `requires_confirmation: true` used to be a bare boolean with no real
+  validity window: nothing stopped a late or replayed confirmation
+  response from authorizing a now-outdated action. `gateway.py` gains
+  `PendingConfirmation` - a self-describing, checksummed
+  `confirmationToken` naming the exact intent + entities it was issued
+  for, riding along on every reply that `requiresConfirmation`. New
+  `confirm_pending_action()` and `POST /v1/voice/confirm` report a real,
+  separate `confirmation_result` (`confirmed`/`expired`/`invalid`, never
+  a bare boolean) - `confirmed` only within a real 30s validity window
+  (mirrors HYDRA-UMC-SAFETY-ZONES' own calibration/observation freshness
+  convention: a future-timestamped token fails safe too, never treated
+  as extra-fresh). This gateway keeps no server-side session store: the
+  token itself carries everything needed to verify it, so a changed
+  parameter (a different mission, a different robot) always mints its
+  own distinct token - an old one, even if genuinely confirmed, can
+  never be mistaken for authorizing a different, newer request. 14 new
+  tests.
 - **New `tests/test_http_service.py`** (18 tests) - found during a
   code-quality review: `http_service.py` - the
   real authenticated Watch HTTP gateway (bearer-token check, body-size

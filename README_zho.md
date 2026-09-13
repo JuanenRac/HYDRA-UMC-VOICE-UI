@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Hailo-10">
 </p>
 
-**诚实核查 - 今天真正能运行的部分：** WAV 加载与基于能量阈值的语音活动检测（`audio.py`）、基于规则的意图/实体解析器及其具备歧义感知能力的 `classify_intent()`（`intent.py`）、受限且需要确认的文本到意图网关（`gateway.py`），以及面向 Watch 中继的经过认证的 HTTP 边界（`http_service.py`）都是真实且经过测试的——56 个通过的测试（`pytest tests/`），包括针对一个真实运行中的 `VoiceGatewayServer` 的端到端测试套件（令牌的必需/接受/拒绝、真实的 `POST /v1/voice/turn` 往返、格式错误/超大的请求体，以及真正缺失的 `Content-Length`）。这些功能都不需要麦克风、Whisper 模型或 Hailo-10 NPU 就能运行或测试——`analyze-audio`/`parse-intent`/`serve` 如今都能针对一个 WAV 文件或已转写的文本正常工作。新增的 `Dockerfile` 复用了已经在真实 CM5 systemd 单元上验证过的相同 CLI 参数，但其本身尚未经过构建测试——这台开发机器上没有 Docker 运行时。本 README 自己路线图中描述的真正的 Whisper STT 与神经网络 TTS 流水线仍然完全是愿景：目前尚未集成任何语音识别或语音合成模型，而且这个环境也没有可以运行它的实体 Hailo-10 模块。具体已经交付了什么，请参见 `CHANGELOG.md`，以及下文第 1 节自己的功能列表中按功能划分的真实/未来对照。
+**诚实核查 - 今天真正能运行的部分：** WAV 加载与基于能量阈值的语音活动检测（`audio.py`）、基于规则的意图/实体解析器及其具备歧义感知能力的 `classify_intent()`（`intent.py`）、受限且需要确认的文本到意图网关（`gateway.py`），以及面向 Watch 中继的经过认证的 HTTP 边界（`http_service.py`）都是真实且经过测试的——70 个通过的测试（`pytest tests/`），包括针对一个真实运行中的 `VoiceGatewayServer` 的端到端测试套件（令牌的必需/接受/拒绝、真实的 `POST /v1/voice/turn` 往返、格式错误/超大的请求体，以及真正缺失的 `Content-Length`）。这些功能都不需要麦克风、Whisper 模型或 Hailo-10 NPU 就能运行或测试——`analyze-audio`/`parse-intent`/`serve` 如今都能针对一个 WAV 文件或已转写的文本正常工作。新增的 `Dockerfile` 复用了已经在真实 CM5 systemd 单元上验证过的相同 CLI 参数，但其本身尚未经过构建测试——这台开发机器上没有 Docker 运行时。本 README 自己路线图中描述的真正的 Whisper STT 与神经网络 TTS 流水线仍然完全是愿景：目前尚未集成任何语音识别或语音合成模型，而且这个环境也没有可以运行它的实体 Hailo-10 模块。具体已经交付了什么，请参见 `CHANGELOG.md`，以及下文第 1 节自己的功能列表中按功能划分的真实/未来对照。
 
 ---
 
@@ -127,7 +127,7 @@ run.bat
 `run.sh` 的预期输出：
 
 ```text
-HYDRA-UMC-VOICE-UI v0.1.1
+HYDRA-UMC-VOICE-UI v0.1.2
 Voice UI (Hailo-10) - local STT/TTS pipeline for hands-free robotic mission control.
 ```
 

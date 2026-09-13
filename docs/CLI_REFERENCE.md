@@ -205,7 +205,7 @@ POST /v1/voice/turn accepts bounded text only; it never actuates robots.
 
 ```
 $ curl -s http://127.0.0.1:8099/health
-{"product":"HYDRA-UMC-VOICE-UI","version":"0.1.0","voiceTurnEndpoint":"/v1/voice/turn","authRequired":false}
+{"product":"HYDRA-UMC-VOICE-UI","version":"0.1.1","voiceTurnEndpoint":"/v1/voice/turn","voiceConfirmEndpoint":"/v1/voice/confirm","authRequired":false}
 ```
 
 (stopped with Ctrl+C / SIGINT once confirmed — `serve` prints

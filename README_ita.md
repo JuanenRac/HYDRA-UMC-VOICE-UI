@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Piattaforma-Hailo--10-green.svg" alt="Hailo-10">
 </p>
 
-**Verifica di onestà - cosa funziona davvero oggi:** il caricamento WAV e il rilevamento dell'attività vocale a soglia di energia (`audio.py`), il parser di intenti/entità basato su regole e il suo `classify_intent()` consapevole dell'ambiguità (`intent.py`), il gateway testo-intento limitato e con conferma (`gateway.py`), e il confine HTTP autenticato per il relay del Watch (`http_service.py`) sono reali e testati - 56 test superati (`pytest tests/`), inclusa una vera suite end-to-end contro un `VoiceGatewayServer` live (token richiesto/accettato/rifiutato, un vero round trip `POST /v1/voice/turn`, corpi malformati/sovradimensionati, un `Content-Length` genuinamente assente). Niente di tutto ciò richiede un microfono, un modello Whisper o un NPU Hailo-10 per essere eseguito o testato - `analyze-audio`/`parse-intent`/`serve` funzionano già oggi su un file WAV o testo già trascritto. Il nuovo `Dockerfile` riutilizza gli stessi flag CLI già verificati dal vivo sulla vera unità systemd della CM5, ma non è stato testato in build di per sé - questa macchina di sviluppo non ha un runtime Docker. La vera pipeline Whisper STT e TTS neurale che la roadmap di questo README descrive resta pura aspirazione: non è stato integrato nessun modello di riconoscimento o sintesi vocale, e questo ambiente non ha un modulo Hailo-10 fisico su cui eseguirne uno. Vedi `CHANGELOG.md` per sapere esattamente cosa è stato consegnato finora, e l'elenco delle funzionalità della sezione 1 più sotto per il dettaglio reale/futuro per funzionalità.
+**Verifica di onestà - cosa funziona davvero oggi:** il caricamento WAV e il rilevamento dell'attività vocale a soglia di energia (`audio.py`), il parser di intenti/entità basato su regole e il suo `classify_intent()` consapevole dell'ambiguità (`intent.py`), il gateway testo-intento limitato e con conferma (`gateway.py`), e il confine HTTP autenticato per il relay del Watch (`http_service.py`) sono reali e testati - 70 test superati (`pytest tests/`), inclusa una vera suite end-to-end contro un `VoiceGatewayServer` live (token richiesto/accettato/rifiutato, un vero round trip `POST /v1/voice/turn`, corpi malformati/sovradimensionati, un `Content-Length` genuinamente assente). Niente di tutto ciò richiede un microfono, un modello Whisper o un NPU Hailo-10 per essere eseguito o testato - `analyze-audio`/`parse-intent`/`serve` funzionano già oggi su un file WAV o testo già trascritto. Il nuovo `Dockerfile` riutilizza gli stessi flag CLI già verificati dal vivo sulla vera unità systemd della CM5, ma non è stato testato in build di per sé - questa macchina di sviluppo non ha un runtime Docker. La vera pipeline Whisper STT e TTS neurale che la roadmap di questo README descrive resta pura aspirazione: non è stato integrato nessun modello di riconoscimento o sintesi vocale, e questo ambiente non ha un modulo Hailo-10 fisico su cui eseguirne uno. Vedi `CHANGELOG.md` per sapere esattamente cosa è stato consegnato finora, e l'elenco delle funzionalità della sezione 1 più sotto per il dettaglio reale/futuro per funzionalità.
 
 ---
 
@@ -188,7 +188,7 @@ suite di test (`pytest tests/`). Output atteso di un `run.sh` senza
 argomenti:
 
 ```text
-HYDRA-UMC-VOICE-UI v0.1.1
+HYDRA-UMC-VOICE-UI v0.1.2
 Voice UI (Hailo-10) - local STT/TTS pipeline for hands-free robotic mission control.
 ```
 

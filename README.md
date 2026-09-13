@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Hailo-10">
 </p>
 
-**Honesty check - what actually runs today:** the WAV loading and energy-gate voice-activity detection (`audio.py`), the rule-based intent/entity parser and its ambiguity-aware `classify_intent()` (`intent.py`), the bounded confirmation-gated text-to-intent gateway (`gateway.py`), and the authenticated HTTP boundary for the Watch relay (`http_service.py`) are real and tested - 56 passing tests (`pytest tests/`), including a real end-to-end suite against a live `VoiceGatewayServer` (token required/accepted/rejected, a real `POST /v1/voice/turn` round trip, malformed/oversized bodies, a genuinely missing `Content-Length`). None of this needs a microphone, a Whisper model, or a Hailo-10 NPU to run or test - `analyze-audio`/`parse-intent`/`serve` all work today against a WAV file or already-transcribed text. The new `Dockerfile` reuses the same CLI flags already verified live on the real CM5 systemd unit, but has not itself been build-tested - there's no Docker runtime on this development machine. The actual Whisper STT and neural TTS pipeline this README's own roadmap describes is still pure aspiration: no speech-recognition or speech-synthesis model has been integrated, and this environment has no physical Hailo-10 module to run one on. See `CHANGELOG.md` for exactly what has shipped so far, and section 1's own feature list below for the per-feature real/future breakdown.
+**Honesty check - what actually runs today:** the WAV loading and energy-gate voice-activity detection (`audio.py`), the rule-based intent/entity parser and its ambiguity-aware `classify_intent()` (`intent.py`), the bounded confirmation-gated text-to-intent gateway with a real, bounded confirmation validity window (`gateway.py` - I37: a self-describing, checksummed `confirmationToken` names the exact intent/entities it was issued for, so a late/replayed confirmation can never authorize a now-outdated action, and never past its own real expiry), and the authenticated HTTP boundary for the Watch relay, including `POST /v1/voice/confirm` (`http_service.py`) are real and tested - 70 passing tests (`pytest tests/`), including a real end-to-end suite against a live `VoiceGatewayServer` (token required/accepted/rejected, a real `POST /v1/voice/turn`/`POST /v1/voice/confirm` round trip, malformed/oversized bodies, a genuinely missing `Content-Length`). None of this needs a microphone, a Whisper model, or a Hailo-10 NPU to run or test - `analyze-audio`/`parse-intent`/`serve` all work today against a WAV file or already-transcribed text. The new `Dockerfile` reuses the same CLI flags already verified live on the real CM5 systemd unit, but has not itself been build-tested - there's no Docker runtime on this development machine. The actual Whisper STT and neural TTS pipeline this README's own roadmap describes is still pure aspiration: no speech-recognition or speech-synthesis model has been integrated, and this environment has no physical Hailo-10 module to run one on. See `CHANGELOG.md` for exactly what has shipped so far, and section 1's own feature list below for the per-feature real/future breakdown.
 
 ---
 
@@ -178,7 +178,7 @@ run.bat
 (`pytest tests/`). Expected output of a bare `run.sh`:
 
 ```text
-HYDRA-UMC-VOICE-UI v0.1.1
+HYDRA-UMC-VOICE-UI v0.1.2
 Voice UI (Hailo-10) - local STT/TTS pipeline for hands-free robotic mission control.
 ```
 
@@ -216,9 +216,9 @@ run.bat parse-intent "status of robot 3"
 
 ## 🎙️ WATCH VOICE GATEWAY (v0)
 
-`python -m hydra_umc_voice_ui.main serve` exposes a deliberately bounded local HTTP gateway for a paired HYDRA-UMC-WATCH integration: `GET /health` and `POST /v1/voice/turn`. The gateway validates the typed `voice_turn` payload, uses the existing deterministic intent parser and returns an `assistant_reply`; it does not control robot hardware.
+`python -m hydra_umc_voice_ui.main serve` exposes a deliberately bounded local HTTP gateway for a paired HYDRA-UMC-WATCH integration: `GET /health`, `POST /v1/voice/turn` and `POST /v1/voice/confirm`. The gateway validates the typed `voice_turn` payload, uses the existing deterministic intent parser and returns an `assistant_reply`; it does not control robot hardware.
 
-Loopback development may run without a token. A non-loopback bind requires `HYDRA_UMC_VOICE_UI_TOKEN` and a matching `Authorization: Bearer` header. Raw audio is never sent through this API, and motion-related intents always return `requiresConfirmation: true`.
+Loopback development may run without a token. A non-loopback bind requires `HYDRA_UMC_VOICE_UI_TOKEN` and a matching `Authorization: Bearer` header. Raw audio is never sent through this API, and motion-related intents always return `requiresConfirmation: true` along with a real, bounded `confirmationToken` (I37) - the Watch client echoes it back to `POST /v1/voice/confirm`, which reports `confirmed`/`expired`/`invalid` (never a bare boolean) without itself dispatching anything. See the confirmation section of [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) below for the full contract.
 
 A transcript that genuinely matches more than one known command is rejected with a real, distinct reply instead of being silently resolved to one interpretation:
 
