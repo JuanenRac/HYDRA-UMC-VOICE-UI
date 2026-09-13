@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Hailo-10">
 </p>
 
-**正直な現状確認 - 実際に今動くもの:** WAV 読み込みとエネルギー閾値による音声活動検出（`audio.py`）、ルールベースの意図/エンティティパーサーとそのあいまいさを考慮した `classify_intent()`（`intent.py`）、範囲を限定した確認ゲート付きのテキスト→意図ゲートウェイ（`gateway.py`）、そして Watch リレー向けの認証済み HTTP 境界（`http_service.py`) は本物であり、テストもされている — 56件のテストが通過している（`pytest tests/`）。これには稼働中の `VoiceGatewayServer` に対する本物のエンドツーエンドテストスイート（トークンの必須/受理/拒否、本物の `POST /v1/voice/turn` 往復、不正な形式や過大なボディ、実際に欠落した `Content-Length`）も含まれる。これらはいずれもマイク、Whisper モデル、Hailo-10 NPU なしで実行・テストできる — `analyze-audio`/`parse-intent`/`serve` は今日、WAV ファイルやすでに文字起こしされたテキストに対してすでに動作する。新しい `Dockerfile` は実際の CM5 systemd ユニットですでに検証済みの CLI フラグをそのまま再利用しているが、それ自体はビルドテストされていない — この開発マシンには Docker ランタイムがない。この README 自身のロードマップが説明する本物の Whisper STT とニューラル TTS パイプラインは、依然として純粋な構想にとどまる。音声認識または音声合成モデルはまだ何も統合されておらず、この環境にはそれを実行する物理的な Hailo-10 モジュールもない。これまでに実際に出荷されたものの詳細は `CHANGELOG.md` を、機能ごとの実装済み/将来の内訳は下記セクション1の機能リスト自体を参照。
+**正直な現状確認 - 実際に今動くもの:** WAV 読み込みとエネルギー閾値による音声活動検出（`audio.py`）、ルールベースの意図/エンティティパーサーとそのあいまいさを考慮した `classify_intent()`（`intent.py`）、範囲を限定した確認ゲート付きのテキスト→意図ゲートウェイ（`gateway.py`）、そして Watch リレー向けの認証済み HTTP 境界（`http_service.py`) は本物であり、テストもされている — 70件のテストが通過している（`pytest tests/`）。これには稼働中の `VoiceGatewayServer` に対する本物のエンドツーエンドテストスイート（トークンの必須/受理/拒否、本物の `POST /v1/voice/turn` 往復、不正な形式や過大なボディ、実際に欠落した `Content-Length`）も含まれる。これらはいずれもマイク、Whisper モデル、Hailo-10 NPU なしで実行・テストできる — `analyze-audio`/`parse-intent`/`serve` は今日、WAV ファイルやすでに文字起こしされたテキストに対してすでに動作する。新しい `Dockerfile` は実際の CM5 systemd ユニットですでに検証済みの CLI フラグをそのまま再利用しているが、それ自体はビルドテストされていない — この開発マシンには Docker ランタイムがない。この README 自身のロードマップが説明する本物の Whisper STT とニューラル TTS パイプラインは、依然として純粋な構想にとどまる。音声認識または音声合成モデルはまだ何も統合されておらず、この環境にはそれを実行する物理的な Hailo-10 モジュールもない。これまでに実際に出荷されたものの詳細は `CHANGELOG.md` を、機能ごとの実装済み/将来の内訳は下記セクション1の機能リスト自体を参照。
 
 ---
 
@@ -131,7 +131,7 @@ run.bat
 実行します（`pytest tests/`）。引数なしの `run.sh` の予期される出力：
 
 ```text
-HYDRA-UMC-VOICE-UI v0.1.1
+HYDRA-UMC-VOICE-UI v0.1.2
 Voice UI (Hailo-10) - local STT/TTS pipeline for hands-free robotic mission control.
 ```
 

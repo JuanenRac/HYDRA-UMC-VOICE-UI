@@ -14,7 +14,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Final
 
 from . import __version__
-from .gateway import VoiceTurn, VoiceTurnValidationError, process_voice_turn
+from .gateway import VoiceTurn, VoiceTurnValidationError, confirm_pending_action, process_voice_turn
 
 MAX_BODY_BYTES: Final = 4 * 1024
 
@@ -62,11 +62,12 @@ class VoiceGatewayHandler(BaseHTTPRequestHandler):
             "product": "HYDRA-UMC-VOICE-UI",
             "version": __version__,
             "voiceTurnEndpoint": "/v1/voice/turn",
+            "voiceConfirmEndpoint": "/v1/voice/confirm",
             "authRequired": bool(self.server.token),
         })
 
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API name
-        if self.path != "/v1/voice/turn":
+        if self.path not in ("/v1/voice/turn", "/v1/voice/confirm"):
             self._write_json(HTTPStatus.NOT_FOUND, {"error": "not found"})
             return
         if not self._is_authorized():
@@ -82,8 +83,23 @@ class VoiceGatewayHandler(BaseHTTPRequestHandler):
             return
         try:
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            self._write_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return
+
+        if self.path == "/v1/voice/confirm":
+            # I37: a real, separate result from the original turn's own
+            # reply - never re-actuates anything, only ever reports
+            # whether a specific pending confirmation is still genuine
+            # and within its own real validity window.
+            token = payload.get("confirmationToken") if isinstance(payload, dict) else None
+            result = confirm_pending_action(token)
+            self._write_json(HTTPStatus.OK, result.to_payload())
+            return
+
+        try:
             reply = process_voice_turn(VoiceTurn.from_payload(payload))
-        except (UnicodeDecodeError, json.JSONDecodeError, VoiceTurnValidationError) as error:
+        except VoiceTurnValidationError as error:
             self._write_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
             return
         self._write_json(HTTPStatus.OK, reply.to_payload())

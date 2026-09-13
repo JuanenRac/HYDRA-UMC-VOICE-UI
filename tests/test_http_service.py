@@ -229,3 +229,46 @@ def test_turn_rejects_a_body_over_the_real_size_limit() -> None:
         status, body = _post(f"{base}/v1/voice/turn", oversized)
         assert status == 413
         assert "error" in body
+
+
+# ---------------------------------------------------------------------------
+# I37: POST /v1/voice/confirm - real end-to-end confirmation round trip
+# ---------------------------------------------------------------------------
+
+
+def test_health_advertises_the_real_confirm_endpoint() -> None:
+    with running_server() as base:
+        status, body = _get(f"{base}/health")
+        assert status == 200
+        assert body["voiceConfirmEndpoint"] == "/v1/voice/confirm"
+
+
+def test_confirm_round_trip_confirms_the_real_pending_action() -> None:
+    with running_server() as base:
+        status, turn_body = _post(f"{base}/v1/voice/turn", _turn(transcript="stop"))
+        assert status == 200
+        token = turn_body["confirmationToken"]
+
+        status, confirm_body = _post(
+            f"{base}/v1/voice/confirm", json.dumps({"confirmationToken": token}).encode("utf-8")
+        )
+        assert status == 200
+        assert confirm_body["status"] == "confirmed"
+        assert confirm_body["intent"]["name"] == "stop"
+
+
+def test_confirm_rejects_a_malformed_token_as_invalid_not_a_500() -> None:
+    with running_server() as base:
+        status, body = _post(
+            f"{base}/v1/voice/confirm", json.dumps({"confirmationToken": "garbage"}).encode("utf-8")
+        )
+        assert status == 200  # a genuinely bad token is a real, reported result, not a request error
+        assert body["status"] == "invalid"
+
+
+def test_confirm_requires_the_same_bearer_token_as_turn() -> None:
+    with running_server(token="secret") as base:
+        status, _ = _post(
+            f"{base}/v1/voice/confirm", json.dumps({"confirmationToken": "x"}).encode("utf-8")
+        )
+        assert status == 401
