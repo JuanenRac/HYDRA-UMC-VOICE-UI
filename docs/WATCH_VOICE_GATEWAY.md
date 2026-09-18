@@ -53,7 +53,7 @@ additive `visualState` is a bounded UI hint (`acknowledged`, `clarification`,
 robot-health or motion-state claim. A recognised motion request is labelled
 `requiresConfirmation: true`; this v0 service does not dispatch robot commands.
 
-### Confirming a motion request (I37)
+### Confirming a motion request
 
 A reply with `requiresConfirmation: true` also carries a real, bounded
 `confirmationToken` and `confirmationValiditySeconds` (30s by default) - the

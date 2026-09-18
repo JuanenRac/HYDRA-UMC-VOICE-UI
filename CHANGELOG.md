@@ -5,9 +5,9 @@ version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
 bumped manually only. See `bump_version.py`.
 
-## [0.1.2] - I37: bounded confirmation validity, and a real Dockerfile
+## [0.1.2] - Bounded confirmation validity, and a real Dockerfile
 
-- **I37 ("Diálogo de confirmación con vigencia y resultado separado")** -
+- **A confirmation dialog with a real validity window and a separate result** -
   `requires_confirmation: true` used to be a bare boolean with no real
   validity window: nothing stopped a late or replayed confirmation
   response from authorizing a now-outdated action. `gateway.py` gains
