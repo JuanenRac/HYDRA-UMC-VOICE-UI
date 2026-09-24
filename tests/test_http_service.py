@@ -232,7 +232,7 @@ def test_turn_rejects_a_body_over_the_real_size_limit() -> None:
 
 
 # ---------------------------------------------------------------------------
-# I37: POST /v1/voice/confirm - real end-to-end confirmation round trip
+# POST /v1/voice/confirm - real end-to-end confirmation round trip
 # ---------------------------------------------------------------------------
 
 

@@ -11,14 +11,14 @@ the watch contract to the existing intent parser; an authenticated Server /
 Semantic Planner integration can replace the response policy without changing
 the wire shape.
 
-I37 ("Diálogo de confirmación con vigencia y resultado separado"): a real
+("Diálogo de confirmación con vigencia y resultado separado"): a real
 confirmation gains its own bounded validity window (`PendingConfirmation`),
 not just a boolean `requires_confirmation` flag. This gateway stays
 deliberately stateless (no server-side session store) - `PendingConfirmation`
 is instead a self-describing, checksummed token the client (Watch) holds
 onto and echoes back on the confirming turn, exactly the same "the client
 carries correlation" shape `to_payload()` already uses elsewhere. Solves
-I37's own literal acceptance test: a late/replayed confirmation response
+this project's own literal acceptance test: a late/replayed confirmation response
 can only ever confirm the EXACT action (intent + entities) it was issued
 for, at the moment it was issued for it - never "whatever is currently
 pending" (there is no such shared, mutable state to accidentally target),
@@ -39,7 +39,7 @@ from .intent import INTENT_GO_HOME, INTENT_START_MISSION, INTENT_STATUS, INTENT_
 MAX_TRANSCRIPT_LENGTH = 500
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 
-# I37: how long a real pending confirmation stays valid after being
+# how long a real pending confirmation stays valid after being
 # issued. Long enough for a human to actually hear the prompt and
 # respond, short enough that a stale/replayed confirmation response
 # arriving much later can never authorize a now-outdated action.
@@ -51,13 +51,13 @@ class VoiceTurnValidationError(ValueError):
 
 
 class ConfirmationError(ValueError):
-    """I37: raised when a confirmation token is malformed, tampered with,
+    """raised when a confirmation token is malformed, tampered with,
     or otherwise cannot be trusted enough to even check its expiry."""
 
 
 @dataclass(frozen=True)
 class PendingConfirmation:
-    """I37's own real, bounded confirmation record. `entities` is stored
+    """this project's own real, bounded confirmation record. `entities` is stored
     as a sorted tuple of pairs (not a dict) so equality/encoding stay
     deterministic regardless of the source dict's own insertion order.
     """
@@ -161,7 +161,7 @@ class AssistantReply:
     speak: bool
     requires_confirmation: bool
     intent: Intent | None
-    # I37: only ever set alongside requires_confirmation=True - the real,
+    # only ever set alongside requires_confirmation=True - the real,
     # bounded pending confirmation the Watch client must echo back
     # (as `confirmationToken`) on the turn that confirms this specific
     # action.
@@ -268,7 +268,7 @@ def process_voice_turn(turn: VoiceTurn, *, now: datetime | None = None) -> Assis
 
 @dataclass(frozen=True)
 class ConfirmationResult:
-    """I37's own literal design point: confirmation is a real, separate
+    """this project's own literal design point: confirmation is a real, separate
     result from the original turn's own reply - never folded back into
     a generic AssistantReply with a reused vocabulary. `status` is one
     of "confirmed" / "expired" / "invalid" - never a bare boolean, so a
@@ -293,7 +293,7 @@ class ConfirmationResult:
 
 
 def confirm_pending_action(confirmation_token: object, *, now: datetime | None = None) -> ConfirmationResult:
-    """I37's own literal acceptance test: a repeated/replayed confirmation
+    """this project's own literal acceptance test: a repeated/replayed confirmation
     token past its own real validity window - or one that never named a
     real pending action at all - must never confirm anything. Only a
     token that is both structurally genuine AND still within

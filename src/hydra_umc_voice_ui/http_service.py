@@ -88,7 +88,7 @@ class VoiceGatewayHandler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/v1/voice/confirm":
-            # I37: a real, separate result from the original turn's own
+            # a real, separate result from the original turn's own
             # reply - never re-actuates anything, only ever reports
             # whether a specific pending confirmation is still genuine
             # and within its own real validity window.
