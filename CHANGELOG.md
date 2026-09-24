@@ -5,6 +5,10 @@ version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
 bumped manually only. See `bump_version.py`.
 
+## [0.1.3] - Interpretation record
+
+- Every assistant reply now carries an interpretation block: the text as heard, the text after normalization and the names of every rule that matched, so a later action can be traced back to what was said. Interpreting a request still never authorizes it.
+
 ## [0.1.2] - Bounded confirmation validity, and a real Dockerfile
 
 - **A confirmation dialog with a real validity window and a separate result** -

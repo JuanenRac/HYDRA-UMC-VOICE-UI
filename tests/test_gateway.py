@@ -270,3 +270,33 @@ def test_http_gateway_requires_token_and_returns_watch_reply() -> None:
         gateway.shutdown()
         gateway.server_close()
         worker.join(timeout=2)
+
+
+def _turn(text: str) -> VoiceTurn:
+    return VoiceTurn(request_id="r1", transcript=text, locale="en-US")
+
+
+def test_every_reply_says_what_was_heard_and_which_rules_matched() -> None:
+    reply = process_voice_turn(_turn("Please, go home!"))
+    assert reply.interpretation == {
+        "heardText": "Please, go home!",
+        "normalizedText": "go home",
+        "matchedRules": ["go_home"],
+    }
+    assert reply.to_payload()["interpretation"] == reply.interpretation
+
+
+def test_a_request_that_matched_nothing_or_several_rules_still_records_how_it_was_read() -> None:
+    nothing = process_voice_turn(_turn("play some music"))
+    assert nothing.interpretation["matchedRules"] == []
+    several = process_voice_turn(_turn("stop and give me the status"))
+    assert several.interpretation["matchedRules"] == ["status", "stop"]
+    assert several.intent is None and not several.requires_confirmation
+
+
+def test_interpreting_a_request_never_authorizes_it() -> None:
+    reply = process_voice_turn(_turn("start mission alpha"))
+    assert reply.requires_confirmation and reply.pending_confirmation is not None
+    assert reply.interpretation["matchedRules"] == ["start_mission"]
+    assert "authenticated primary control" in reply.text
+
