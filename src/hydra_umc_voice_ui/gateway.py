@@ -34,7 +34,15 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import re
 
-from .intent import INTENT_GO_HOME, INTENT_START_MISSION, INTENT_STATUS, INTENT_STOP, Intent, classify_intent
+from .intent import (
+    INTENT_GO_HOME,
+    INTENT_START_MISSION,
+    INTENT_STATUS,
+    INTENT_STOP,
+    Intent,
+    classify_intent,
+    normalize_text,
+)
 
 MAX_TRANSCRIPT_LENGTH = 500
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -166,6 +174,11 @@ class AssistantReply:
     # (as `confirmationToken`) on the turn that confirms this specific
     # action.
     pending_confirmation: PendingConfirmation | None = None
+    # How the reply was reached, so what happens next can be traced back to
+    # what was heard: the text as received, the text the rules actually saw
+    # after normalization, and the name of every rule that matched. Present
+    # on every reply produced by process_voice_turn().
+    interpretation: dict[str, object] | None = None
 
     @property
     def visual_state(self) -> str:
@@ -191,6 +204,8 @@ class AssistantReply:
         }
         if self.intent is not None:
             payload["intent"] = {"name": self.intent.name, "entities": self.intent.entities}
+        if self.interpretation is not None:
+            payload["interpretation"] = self.interpretation
         if self.pending_confirmation is not None:
             payload["confirmationToken"] = self.pending_confirmation.encode()
             payload["confirmationValiditySeconds"] = CONFIRMATION_VALIDITY_SECONDS
@@ -212,6 +227,11 @@ def process_voice_turn(turn: VoiceTurn, *, now: datetime | None = None) -> Assis
     """
     now = now if now is not None else datetime.now(timezone.utc)
     classification = classify_intent(turn.transcript)
+    interpretation: dict[str, object] = {
+        "heardText": turn.transcript,
+        "normalizedText": normalize_text(turn.transcript),
+        "matchedRules": sorted({match.name for match in classification.matches}),
+    }
     if classification.is_no_match:
         return AssistantReply(
             request_id=turn.request_id,
@@ -220,6 +240,7 @@ def process_voice_turn(turn: VoiceTurn, *, now: datetime | None = None) -> Assis
             speak=True,
             requires_confirmation=False,
             intent=None,
+            interpretation=interpretation,
         )
     if classification.is_ambiguous:
         names = ", ".join(sorted({match.name for match in classification.matches}))
@@ -230,6 +251,7 @@ def process_voice_turn(turn: VoiceTurn, *, now: datetime | None = None) -> Assis
             speak=True,
             requires_confirmation=False,
             intent=None,
+            interpretation=interpretation,
         )
     intent = classification.matches[0]
 
@@ -243,6 +265,7 @@ def process_voice_turn(turn: VoiceTurn, *, now: datetime | None = None) -> Assis
             speak=True,
             requires_confirmation=False,
             intent=intent,
+            interpretation=interpretation,
         )
 
     if intent.name == INTENT_START_MISSION:
@@ -263,6 +286,7 @@ def process_voice_turn(turn: VoiceTurn, *, now: datetime | None = None) -> Assis
         requires_confirmation=True,
         intent=intent,
         pending_confirmation=PendingConfirmation.issue(turn.request_id, intent, now),
+        interpretation=interpretation,
     )
 
 

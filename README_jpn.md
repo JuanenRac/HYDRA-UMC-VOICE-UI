@@ -131,7 +131,7 @@ run.bat
 実行します（`pytest tests/`）。引数なしの `run.sh` の予期される出力：
 
 ```text
-HYDRA-UMC-VOICE-UI v0.1.2
+HYDRA-UMC-VOICE-UI v0.1.3
 Voice UI (Hailo-10) - local STT/TTS pipeline for hands-free robotic mission control.
 ```
 
@@ -168,7 +168,7 @@ run.bat parse-intent "status of robot 3"
 // POST /v1/voice/turn
 {"type": "voice_turn", "requestId": "watch-voice-001", "transcript": "stop the status check", "locale": "en-US"}
 
-// -> {"type":"assistant_reply","requestId":"watch-voice-001","text":"That request matched more than one action (status, stop). Please rephrase it more specifically.","level":"ATTENTION","speak":true,"requiresConfirmation":false,"visualState":"clarification"}
+// -> {"type":"assistant_reply","requestId":"watch-voice-001","text":"That request matched more than one action (status, stop). Please rephrase it more specifically.","level":"ATTENTION","speak":true,"requiresConfirmation":false,"visualState":"clarification","interpretation":{"heardText":"stop the status check","normalizedText":"stop the status check","matchedRules":["status","stop"]}}
 ```
 
 完全なリクエスト契約とデプロイ境界については [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) を、インストール済みCLIから実際に取得した `analyze-audio`/`parse-intent`/`serve` の全実例については [CLI_REFERENCE.md](docs/CLI_REFERENCE.md) を参照してください。

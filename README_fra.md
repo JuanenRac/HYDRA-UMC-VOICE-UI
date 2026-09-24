@@ -192,7 +192,7 @@ exécutent la vraie suite de tests (`pytest tests/`). Sortie attendue
 d'un `run.sh` sans argument :
 
 ```text
-HYDRA-UMC-VOICE-UI v0.1.2
+HYDRA-UMC-VOICE-UI v0.1.3
 Voice UI (Hailo-10) - local STT/TTS pipeline for hands-free robotic mission control.
 ```
 
@@ -242,7 +242,7 @@ Une transcription qui correspond réellement à plus d'une commande connue est r
 // POST /v1/voice/turn
 {"type": "voice_turn", "requestId": "watch-voice-001", "transcript": "stop the status check", "locale": "en-US"}
 
-// -> {"type":"assistant_reply","requestId":"watch-voice-001","text":"That request matched more than one action (status, stop). Please rephrase it more specifically.","level":"ATTENTION","speak":true,"requiresConfirmation":false,"visualState":"clarification"}
+// -> {"type":"assistant_reply","requestId":"watch-voice-001","text":"That request matched more than one action (status, stop). Please rephrase it more specifically.","level":"ATTENTION","speak":true,"requiresConfirmation":false,"visualState":"clarification","interpretation":{"heardText":"stop the status check","normalizedText":"stop the status check","matchedRules":["status","stop"]}}
 ```
 
 Consultez [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) pour le contrat de requête complet et la limite de déploiement, et [CLI_REFERENCE.md](docs/CLI_REFERENCE.md) pour chaque exemple réel `analyze-audio`/`parse-intent`/`serve` capturé depuis le CLI installé.
