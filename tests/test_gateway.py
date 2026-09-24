@@ -57,7 +57,7 @@ def test_motion_related_turn_requires_primary_confirmation() -> None:
     assert reply.requires_confirmation is True
     assert "No motion is executed" in reply.text
     assert reply.to_payload()["visualState"] == "confirmation-required"
-    # I37: a real, bounded pending confirmation rides along with the
+    # a real, bounded pending confirmation rides along with the
     # reply - not just a bare boolean.
     assert reply.pending_confirmation is not None
     payload = reply.to_payload()
@@ -107,7 +107,7 @@ def test_network_bind_requires_a_private_token() -> None:
 
 
 # =============================================================================
-# I37 ("Diálogo de confirmación con vigencia y resultado separado")
+# ("Diálogo de confirmación con vigencia y resultado separado")
 # =============================================================================
 
 
@@ -142,7 +142,7 @@ def test_confirmation_exactly_at_the_boundary_is_still_valid() -> None:
 
 
 def test_a_late_replayed_confirmation_never_confirms_the_action() -> None:
-    # I37's own literal acceptance test: a late response does not confirm
+    # this project's own literal acceptance test: a late response does not confirm
     # the action - it names the real age and the original intent, never
     # a bare "no".
     reply = process_voice_turn(VoiceTurn.from_payload({
@@ -195,7 +195,7 @@ def test_a_non_string_confirmation_token_is_rejected() -> None:
 
 
 def test_a_changed_parameter_produces_a_different_token_never_reusable_for_the_new_action() -> None:
-    # I37's own "un cambio de parametros invalida la confirmacion previa":
+    # this project's own "un cambio de parametros invalida la confirmacion previa":
     # by construction, a token names the EXACT parameters it was issued
     # for - a prior token for mission "alpha" can never be replayed to
     # confirm a fresh request for mission "beta", because that fresh
