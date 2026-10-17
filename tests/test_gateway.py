@@ -300,3 +300,97 @@ def test_interpreting_a_request_never_authorizes_it() -> None:
     assert reply.interpretation["matchedRules"] == ["start_mission"]
     assert "authenticated primary control" in reply.text
 
+
+
+# =============================================================================
+# the confirmation token is signed with a server key and accepted once
+# =============================================================================
+
+
+def _issue_token(request_id: str, transcript: str = "stop") -> str:
+    reply = process_voice_turn(VoiceTurn.from_payload({
+        "requestId": request_id, "transcript": transcript, "locale": "en-US",
+    }), now=NOW)
+    return reply.to_payload()["confirmationToken"]
+
+
+def test_a_token_built_without_the_server_key_is_rejected() -> None:
+    # What the old format allowed: anyone who knew it could write the payload and
+    # append the SHA-256 prefix of it. The signature now needs the server key.
+    import base64
+    import hashlib
+    import json
+
+    payload = {
+        "nonce": "0123456789abcdef", "requestId": "forged-1", "intent": "start_mission",
+        "entities": [], "issuedAtUtc": NOW.isoformat(),
+    }
+    raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    body = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+    for checksum in (hashlib.sha256(raw).hexdigest()[:16], hashlib.sha256(raw).hexdigest()[:32]):
+        result = confirm_pending_action(f"{body}.{checksum}", now=NOW)
+        assert result.status == "invalid"
+        assert "integrity" in result.reason
+
+
+def test_a_token_is_accepted_once() -> None:
+    token = _issue_token("watch-voice-020")
+
+    first = confirm_pending_action(token, now=NOW + timedelta(seconds=2))
+    second = confirm_pending_action(token, now=NOW + timedelta(seconds=3))
+
+    assert first.status == "confirmed"
+    assert second.status == "invalid"
+    assert "already used" in second.reason
+    assert second.intent_name is None
+
+
+def test_an_expired_replay_is_still_reported_as_expired_not_as_used() -> None:
+    token = _issue_token("watch-voice-021")
+    assert confirm_pending_action(token, now=NOW + timedelta(seconds=1)).status == "confirmed"
+
+    late = confirm_pending_action(token, now=NOW + timedelta(seconds=CONFIRMATION_VALIDITY_SECONDS + 5))
+
+    assert late.status == "expired"
+
+
+def test_two_requests_for_the_same_action_get_different_tokens() -> None:
+    assert _issue_token("watch-voice-022") != _issue_token("watch-voice-022")
+
+
+def test_a_token_signed_with_another_key_stops_verifying() -> None:
+    from hydra_umc_voice_ui import gateway
+
+    token = _issue_token("watch-voice-023")
+    original = gateway._confirmation_secret
+    try:
+        gateway.set_confirmation_secret(b"a-completely-different-key")
+        assert confirm_pending_action(token, now=NOW).status == "invalid"
+    finally:
+        gateway.set_confirmation_secret(original)
+    assert confirm_pending_action(token, now=NOW).status == "confirmed"
+
+
+def test_the_list_of_used_tokens_is_bounded_and_fails_closed(monkeypatch) -> None:
+    from hydra_umc_voice_ui import gateway
+
+    monkeypatch.setattr(gateway, "MAX_USED_CONFIRMATIONS", 2)
+    monkeypatch.setattr(gateway, "_used_confirmations", {})
+    first = confirm_pending_action(_issue_token("watch-voice-024"), now=NOW)
+    second = confirm_pending_action(_issue_token("watch-voice-025"), now=NOW)
+    third = confirm_pending_action(_issue_token("watch-voice-026"), now=NOW)
+
+    assert (first.status, second.status, third.status) == ("confirmed", "confirmed", "invalid")
+    assert "too many" in third.reason
+
+
+def test_the_configured_secret_must_be_long_enough(monkeypatch) -> None:
+    from hydra_umc_voice_ui import gateway
+
+    monkeypatch.setenv("HYDRA_UMC_VOICE_UI_CONFIRM_SECRET", "short")
+    with pytest.raises(ValueError, match="at least 16"):
+        gateway._load_confirmation_secret()
+    monkeypatch.setenv("HYDRA_UMC_VOICE_UI_CONFIRM_SECRET", "a-long-enough-secret")
+    assert gateway._load_confirmation_secret() == b"a-long-enough-secret"
+    monkeypatch.delenv("HYDRA_UMC_VOICE_UI_CONFIRM_SECRET")
+    assert len(gateway._load_confirmation_secret()) == 32

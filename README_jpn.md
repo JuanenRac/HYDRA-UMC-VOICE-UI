@@ -4,7 +4,7 @@
 
 # 🎙️ HYDRA-UMC-VOICE-UI
 
-<p align="center"><a href="README.md">🇺🇸 English</a> | <a href="README_spa.md">🇪🇸 Español</a> | <a href="README_fra.md">🇫🇷 Français</a> | <a href="README_ita.md">🇮🇹 Italiano</a> | <a href="README_deu.md">🇩🇪 Deutsch</a> | <a href="README_zho.md">🇨🇳 简体中文</a> | 🇯🇵 <b>日本語</b></p>
+<p align="center"><a href="README.md">🇺🇸 English</a> | <a href="README_spa.md">🇪🇸 Español</a> | <a href="README_fra.md">🇫🇷 Français</a> | <a href="README_ita.md">🇮🇹 Italiano</a> | <a href="README_deu.md">🇩🇪 Deutsch</a> | <a href="README_zho.md">🇨🇳 简体中文</a> | 🇯🇵 <b>日本語</b> | <a href="README_por.md">🇵🇹 Português</a></p>
 
 ### 🔊 ローカルでハードウェアアクセラレーションされる音声-動作パイプライン
 
@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Hailo-10">
 </p>
 
-**正直な現状確認 - 実際に今動くもの:** WAV 読み込みとエネルギー閾値による音声活動検出（`audio.py`）、ルールベースの意図/エンティティパーサーとそのあいまいさを考慮した `classify_intent()`（`intent.py`）、範囲を限定した確認ゲート付きのテキスト→意図ゲートウェイ（`gateway.py`）、そして Watch リレー向けの認証済み HTTP 境界（`http_service.py`) は本物であり、テストもされている — 70件のテストが通過している（`pytest tests/`）。これには稼働中の `VoiceGatewayServer` に対する本物のエンドツーエンドテストスイート（トークンの必須/受理/拒否、本物の `POST /v1/voice/turn` 往復、不正な形式や過大なボディ、実際に欠落した `Content-Length`）も含まれる。これらはいずれもマイク、Whisper モデル、Hailo-10 NPU なしで実行・テストできる — `analyze-audio`/`parse-intent`/`serve` は今日、WAV ファイルやすでに文字起こしされたテキストに対してすでに動作する。新しい `Dockerfile` は実際の CM5 systemd ユニットですでに検証済みの CLI フラグをそのまま再利用しているが、それ自体はビルドテストされていない — この開発マシンには Docker ランタイムがない。この README 自身のロードマップが説明する本物の Whisper STT とニューラル TTS パイプラインは、依然として純粋な構想にとどまる。音声認識または音声合成モデルはまだ何も統合されておらず、この環境にはそれを実行する物理的な Hailo-10 モジュールもない。これまでに実際に出荷されたものの詳細は `CHANGELOG.md` を、機能ごとの実装済み/将来の内訳は下記セクション1の機能リスト自体を参照。
+**正直な現状確認 - 実際に今動くもの:** WAV 読み込みとエネルギー閾値による音声活動検出（`audio.py`）、ルールベースの意図/エンティティパーサーとそのあいまいさを考慮した `classify_intent()`（`intent.py`）、範囲を限定した確認ゲート付きのテキスト→意図ゲートウェイ（`gateway.py`）、そして Watch リレー向けの認証済み HTTP 境界（`http_service.py`) は本物であり、テストもされている — 80件のテストが通過している（`pytest tests/`）。これには稼働中の `VoiceGatewayServer` に対する本物のエンドツーエンドテストスイート（トークンの必須/受理/拒否、本物の `POST /v1/voice/turn` 往復、不正な形式や過大なボディ、実際に欠落した `Content-Length`）も含まれる。これらはいずれもマイク、Whisper モデル、Hailo-10 NPU なしで実行・テストできる — `analyze-audio`/`parse-intent`/`serve` は今日、WAV ファイルやすでに文字起こしされたテキストに対してすでに動作する。新しい `Dockerfile` は実際の CM5 systemd ユニットですでに検証済みの CLI フラグをそのまま再利用しているが、それ自体はビルドテストされていない — この開発マシンには Docker ランタイムがない。この README 自身のロードマップが説明する本物の Whisper STT とニューラル TTS パイプラインは、依然として純粋な構想にとどまる。音声認識または音声合成モデルはまだ何も統合されておらず、この環境にはそれを実行する物理的な Hailo-10 モジュールもない。これまでに実際に出荷されたものの詳細は `CHANGELOG.md` を、機能ごとの実装済み/将来の内訳は下記セクション1の機能リスト自体を参照。
 
 ---
 
@@ -34,6 +34,7 @@
 * 📢 **自然な TTS：** システムアラートとステータスレポート向けの高品質な音声合成。*（計画中）*
 * 🧠 **NLU パーサー（v0）：** 認識されたテキストからの、ルールベースによる実際の意図/エンティティ抽出。Semantic Planner に提供します。*（小さな実際のコマンド語彙に対する正規表現ルールとして実装済み——学習済み ML モデルではありません。下記の「ビルドと実行」を参照）*
 * 🔀 **あいまいさを考慮した分類：** `classify_intent()` はテキストを正規化し（Unicode NFKC、フィラー語/句読点の除去）、複数の既知コマンドに本当に一致する文字起こしを、黙って1つに絞り込むのではなく拒否します。*（実装済み；下記の Watch 音声ゲートウェイで使用されます）*
+* 🔏 **署名付きの使い切り確認（v0）：** 停止・ミッション開始・帰還を確認する `confirmationToken` は、サーバー鍵（`HYDRA_UMC_VOICE_UI_CONFIRM_SECRET`、16 文字以上。未設定ならプロセスごとにランダムな鍵を生成）による HMAC-SHA256 で署名され、ランダムなナンスを持ち、1 回だけ受け付けられます。同じトークンの 2 回目の使用、手作りした別の意図のトークン、別の鍵で署名されたトークンは `invalid` として拒否されます。以前のトークンは秘密を使わず自身の内容の SHA-256 先頭部分だけだったため、形式を知っていれば誰でも有効な確認を作れ、有効なものは 30 秒の間に再利用できました。OS インストーラーは他のデバイスシークレットと一緒にこの鍵を生成します。*（実装済み）*
 * 🛡️ **ノイズキャンセリング：** 高い環境ノイズを伴う産業環境向けに最適化。*（計画中）*
 * 👨‍👩‍👧 **認知 AI ノードの子プロジェクト：**
   [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE) の下で 4 つの兄弟サービスの 1 つとして動作します（VLA-Engine、Semantic-Planner、Docs-QA と並んで）。独自のコピーを保持するのではなく、親プロジェクトの HydraOS イメージとモデルの重みを共有します。
@@ -131,7 +132,7 @@ run.bat
 実行します（`pytest tests/`）。引数なしの `run.sh` の予期される出力：
 
 ```text
-HYDRA-UMC-VOICE-UI v0.1.3
+HYDRA-UMC-VOICE-UI v0.1.4
 Voice UI (Hailo-10) - local STT/TTS pipeline for hands-free robotic mission control.
 ```
 

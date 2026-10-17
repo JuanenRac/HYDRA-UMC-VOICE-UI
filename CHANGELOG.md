@@ -5,6 +5,12 @@ version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
 bumped manually only. See `bump_version.py`.
 
+## [0.1.4] - Confirmation tokens are signed and accepted once
+
+- **Signed confirmation tokens:** the `confirmationToken` that confirms a stop, a mission start or a go-home is now signed with HMAC-SHA256 under a server key (`HYDRA_UMC_VOICE_UI_CONFIRM_SECRET`, at least 16 characters; without it a random key is made per process and a restart only makes a pending confirmation ask to be repeated). The old token was a SHA-256 prefix of its own content with no secret, so anyone who knew the format could build a valid confirmation for any intent.
+- **Accepted once:** each token carries a random nonce and `POST /v1/voice/confirm` accepts it a single time; a second use is `invalid` ("already used"). An expired replay is still reported as `expired`. The list of used nonces is in memory, pruned as tokens expire and capped at 4096; when it is full new confirmations are refused instead of old ones forgotten.
+- `deploy/voice-ui.env.example` gains the key, which the OS installer fills with a random value like the other device secrets. `docs/WATCH_VOICE_GATEWAY.md` describes the new token. 7 new tests (80 in all): a forged token built the old way, single use, a replay after expiry, distinct tokens for the same action, a key change, the bounded list, and the minimum key length.
+
 ## [0.1.3] - Interpretation record
 
 - Every assistant reply now carries an interpretation block: the text as heard, the text after normalization and the names of every rule that matched, so a later action can be traced back to what was said. Interpreting a request still never authorizes it.

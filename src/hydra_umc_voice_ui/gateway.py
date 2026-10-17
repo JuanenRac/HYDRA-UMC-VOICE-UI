@@ -15,8 +15,8 @@ the wire shape.
 confirmation gains its own bounded validity window (`PendingConfirmation`),
 not just a boolean `requires_confirmation` flag. This gateway stays
 deliberately stateless (no server-side session store) - `PendingConfirmation`
-is instead a self-describing, checksummed token the client (Watch) holds
-onto and echoes back on the confirming turn, exactly the same "the client
+is instead a self-describing, HMAC-signed, single-use token the client
+(Watch) holds onto and echoes back on the confirming turn, exactly the same "the client
 carries correlation" shape `to_payload()` already uses elsewhere. Solves
 this project's own literal acceptance test: a late/replayed confirmation response
 can only ever confirm the EXACT action (intent + entities) it was issued
@@ -29,9 +29,13 @@ from __future__ import annotations
 import base64
 import binascii
 import hashlib
+import hmac
 import json
-from dataclasses import dataclass
-from datetime import datetime, timezone
+import os
+import secrets
+import threading
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 import re
 
 from .intent import (
@@ -52,6 +56,56 @@ REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 # respond, short enough that a stale/replayed confirmation response
 # arriving much later can never authorize a now-outdated action.
 CONFIRMATION_VALIDITY_SECONDS = 30.0
+
+MIN_CONFIRMATION_SECRET_LENGTH = 16
+# a token is accepted once; this bounds the memory the used-token list may take
+MAX_USED_CONFIRMATIONS = 4096
+
+
+def _load_confirmation_secret() -> bytes:
+    """The key that signs confirmation tokens. `HYDRA_UMC_VOICE_UI_CONFIRM_SECRET`
+    pins it (so tokens survive a restart or a second worker); without it a random
+    key is made per process, which is enough for a 30 second token - a restart only
+    makes a pending confirmation ask to be repeated."""
+    configured = os.environ.get("HYDRA_UMC_VOICE_UI_CONFIRM_SECRET", "")
+    if not configured:
+        return secrets.token_bytes(32)
+    if len(configured) < MIN_CONFIRMATION_SECRET_LENGTH:
+        raise ValueError(
+            f"HYDRA_UMC_VOICE_UI_CONFIRM_SECRET must be at least {MIN_CONFIRMATION_SECRET_LENGTH} characters"
+        )
+    return configured.encode("utf-8")
+
+
+_confirmation_secret = _load_confirmation_secret()
+_used_confirmations: dict[str, datetime] = {}
+_used_lock = threading.Lock()
+
+
+def set_confirmation_secret(secret: bytes | None) -> None:
+    """Replace the signing key (tests, or a host that manages the key itself);
+    `None` makes a fresh random one. Tokens signed with the old key stop verifying."""
+    global _confirmation_secret
+    _confirmation_secret = secret if secret else secrets.token_bytes(32)
+
+
+def _sign(raw: bytes) -> str:
+    return hmac.new(_confirmation_secret, raw, hashlib.sha256).hexdigest()[:32]
+
+
+def _consume_confirmation(pending: "PendingConfirmation", now: datetime) -> str | None:
+    """Marks a confirmation as used. Returns why it cannot be used, or None when
+    this is its first and only use."""
+    with _used_lock:
+        for nonce, expires in list(_used_confirmations.items()):
+            if expires < now:
+                del _used_confirmations[nonce]
+        if pending.nonce in _used_confirmations:
+            return "this confirmation was already used - repeat the original request to get a new one"
+        if len(_used_confirmations) >= MAX_USED_CONFIRMATIONS:
+            return "too many confirmations in flight - repeat the request in a moment"
+        _used_confirmations[pending.nonce] = pending.issued_at + timedelta(seconds=CONFIRMATION_VALIDITY_SECONDS)
+    return None
 
 
 class VoiceTurnValidationError(ValueError):
@@ -74,6 +128,7 @@ class PendingConfirmation:
     intent_name: str
     entities: tuple[tuple[str, str], ...]
     issued_at: datetime
+    nonce: str = field(default_factory=lambda: secrets.token_hex(8))
 
     @classmethod
     def issue(cls, request_id: str, intent: Intent, now: datetime) -> "PendingConfirmation":
@@ -96,13 +151,13 @@ class PendingConfirmation:
         return (now - self.issued_at).total_seconds()
 
     def encode(self) -> str:
-        """A self-describing, checksummed token - not a secret, and not
-        meant to defend against a hostile holder (transport-level bearer
-        auth already covers that, see http_service.py); its only real
-        job is tamper-evidence against ACCIDENTAL corruption and a
-        reliable way to decode a specific pending action back out with
-        no server-side session store to consult."""
+        """A self-describing token signed with HMAC-SHA256 under a server key, so
+        only this gateway can mint one: knowing the format (or having seen one)
+        is not enough to forge a token for another intent. It carries a random
+        nonce, and `confirm_pending_action` accepts each nonce once. Transport
+        bearer auth (http_service.py) still decides who may talk to the gateway."""
         payload = {
+            "nonce": self.nonce,
             "requestId": self.request_id,
             "intent": self.intent_name,
             "entities": [list(pair) for pair in self.entities],
@@ -110,20 +165,19 @@ class PendingConfirmation:
         }
         raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
         body = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
-        checksum = hashlib.sha256(raw).hexdigest()[:16]
-        return f"{body}.{checksum}"
+        return f"{body}.{_sign(raw)}"
 
     @classmethod
     def decode(cls, token: str) -> "PendingConfirmation":
         if not isinstance(token, str) or "." not in token:
             raise ConfirmationError("malformed confirmation token")
-        body, _, checksum = token.rpartition(".")
+        body, _, signature = token.rpartition(".")
         try:
             padding = "=" * (-len(body) % 4)
             raw = base64.urlsafe_b64decode(body + padding)
         except (binascii.Error, ValueError) as exc:
             raise ConfirmationError("malformed confirmation token") from exc
-        if hashlib.sha256(raw).hexdigest()[:16] != checksum:
+        if not hmac.compare_digest(_sign(raw), signature):
             raise ConfirmationError("confirmation token failed its own integrity check")
         try:
             decoded = json.loads(raw)
@@ -132,6 +186,7 @@ class PendingConfirmation:
                 intent_name=decoded["intent"],
                 entities=tuple((pair[0], pair[1]) for pair in decoded["entities"]),
                 issued_at=datetime.fromisoformat(decoded["issuedAtUtc"]),
+                nonce=str(decoded["nonce"]),
             )
         except (KeyError, TypeError, ValueError, IndexError) as exc:
             raise ConfirmationError("malformed confirmation token") from exc
@@ -350,6 +405,12 @@ def confirm_pending_action(confirmation_token: object, *, now: datetime | None =
         return ConfirmationResult(
             status="expired", request_id=pending.request_id, intent_name=pending.intent_name,
             entities=dict(pending.entities), age_seconds=age, reason=reason,
+        )
+    already_used = _consume_confirmation(pending, now)
+    if already_used is not None:
+        return ConfirmationResult(
+            status="invalid", request_id=None, intent_name=None, entities=None, age_seconds=None,
+            reason=already_used,
         )
     return ConfirmationResult(
         status="confirmed", request_id=pending.request_id, intent_name=pending.intent_name,

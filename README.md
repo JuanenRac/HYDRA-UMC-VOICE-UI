@@ -4,7 +4,7 @@
 
 # 🎙️ HYDRA-UMC-VOICE-UI
 
-<p align="center">🇺🇸 <b>English</b> | <a href="README_spa.md">🇪🇸 Español</a> | <a href="README_fra.md">🇫🇷 Français</a> | <a href="README_ita.md">🇮🇹 Italiano</a> | <a href="README_deu.md">🇩🇪 Deutsch</a> | <a href="README_zho.md">🇨🇳 简体中文</a> | <a href="README_jpn.md">🇯🇵 日本語</a></p>
+<p align="center">🇺🇸 <b>English</b> | <a href="README_spa.md">🇪🇸 Español</a> | <a href="README_fra.md">🇫🇷 Français</a> | <a href="README_ita.md">🇮🇹 Italiano</a> | <a href="README_deu.md">🇩🇪 Deutsch</a> | <a href="README_zho.md">🇨🇳 简体中文</a> | <a href="README_jpn.md">🇯🇵 日本語</a> | <a href="README_por.md">🇵🇹 Português</a></p>
 
 ### 🔊 Local Hardware-Accelerated Speech-to-Action Pipeline
 
@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Hailo-10">
 </p>
 
-**Honesty check - what actually runs today:** the WAV loading and energy-gate voice-activity detection (`audio.py`), the rule-based intent/entity parser and its ambiguity-aware `classify_intent()` (`intent.py`), the bounded confirmation-gated text-to-intent gateway with a real, bounded confirmation validity window (`gateway.py` - a self-describing, checksummed `confirmationToken` names the exact intent/entities it was issued for, so a late/replayed confirmation can never authorize a now-outdated action, and never past its own real expiry), and the authenticated HTTP boundary for the Watch relay, including `POST /v1/voice/confirm` (`http_service.py`) are real and tested - 70 passing tests (`pytest tests/`), including a real end-to-end suite against a live `VoiceGatewayServer` (token required/accepted/rejected, a real `POST /v1/voice/turn`/`POST /v1/voice/confirm` round trip, malformed/oversized bodies, a genuinely missing `Content-Length`). None of this needs a microphone, a Whisper model, or a Hailo-10 NPU to run or test - `analyze-audio`/`parse-intent`/`serve` all work today against a WAV file or already-transcribed text. The new `Dockerfile` reuses the same CLI flags already verified live on the real CM5 systemd unit, but has not itself been build-tested - there's no Docker runtime on this development machine. The actual Whisper STT and neural TTS pipeline this README's own roadmap describes is still pure aspiration: no speech-recognition or speech-synthesis model has been integrated, and this environment has no physical Hailo-10 module to run one on. See `CHANGELOG.md` for exactly what has shipped so far, and section 1's own feature list below for the per-feature real/future breakdown.
+**Honesty check - what actually runs today:** the WAV loading and energy-gate voice-activity detection (`audio.py`), the rule-based intent/entity parser and its ambiguity-aware `classify_intent()` (`intent.py`), the bounded confirmation-gated text-to-intent gateway with a real, bounded confirmation validity window (`gateway.py` - a self-describing, HMAC-signed, single-use `confirmationToken` names the exact intent/entities it was issued for, so a late/replayed confirmation can never authorize a now-outdated action, and never past its own real expiry), and the authenticated HTTP boundary for the Watch relay, including `POST /v1/voice/confirm` (`http_service.py`) are real and tested - 80 passing tests (`pytest tests/`), including a real end-to-end suite against a live `VoiceGatewayServer` (token required/accepted/rejected, a real `POST /v1/voice/turn`/`POST /v1/voice/confirm` round trip, malformed/oversized bodies, a genuinely missing `Content-Length`). None of this needs a microphone, a Whisper model, or a Hailo-10 NPU to run or test - `analyze-audio`/`parse-intent`/`serve` all work today against a WAV file or already-transcribed text. The new `Dockerfile` reuses the same CLI flags already verified live on the real CM5 systemd unit, but has not itself been build-tested - there's no Docker runtime on this development machine. The actual Whisper STT and neural TTS pipeline this README's own roadmap describes is still pure aspiration: no speech-recognition or speech-synthesis model has been integrated, and this environment has no physical Hailo-10 module to run one on. See `CHANGELOG.md` for exactly what has shipped so far, and section 1's own feature list below for the per-feature real/future breakdown.
 
 ---
 
@@ -30,6 +30,7 @@ It allows operators to control robotic missions, query system status, and receiv
 * 📢 **Natural TTS:** High-quality voice synthesis for system alerts and status reports. *(planned)*
 * 🧠 **NLU Parser (v0):** Real rule-based intent/entity extraction from recognized text for the Semantic Planner. *(implemented as regex rules over a small real command vocabulary - not a trained ML model; see BUILD & RUN below)*
 * 🔀 **Ambiguity-Aware Classification:** `classify_intent()` normalizes text (Unicode NFKC, filler/punctuation stripping) and rejects a transcript that genuinely matches more than one known command instead of silently guessing one. *(implemented; used by the Watch voice gateway below)*
+* 🔏 **Signed, single-use confirmations (v0):** the `confirmationToken` that confirms a stop, a mission start or a go-home is signed with HMAC-SHA256 under a server key (`HYDRA_UMC_VOICE_UI_CONFIRM_SECRET`, at least 16 characters; without it a random key is made per process), carries a random nonce, and is accepted once: a second use of the same token, a token for another intent assembled by hand, or one signed with another key is refused as `invalid`. Before, the token was a SHA-256 prefix of its own content with no secret, so anyone who knew the format could build a valid confirmation, and a valid one could be replayed during its 30 seconds. The OS installer generates the key with the other device secrets. *(implemented)*
 * 🛡️ **Noise Cancellation:** Optimized for industrial environments with high ambient noise. *(planned)*
 * 👨‍👩‍👧 **Cognitive AI Node Child:** Runs as one of four sibling services
   under [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE)
@@ -178,7 +179,7 @@ run.bat
 (`pytest tests/`). Expected output of a bare `run.sh`:
 
 ```text
-HYDRA-UMC-VOICE-UI v0.1.3
+HYDRA-UMC-VOICE-UI v0.1.4
 Voice UI (Hailo-10) - local STT/TTS pipeline for hands-free robotic mission control.
 ```
 

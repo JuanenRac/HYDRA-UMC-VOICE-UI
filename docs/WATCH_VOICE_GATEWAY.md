@@ -80,12 +80,22 @@ once the human actually confirms:
   treated as extra-fresh). `reason` names the real age; the client must
   repeat the original request and confirm the new one, never retry the
   stale token.
-* `invalid` - the token is malformed, tampered with, or was never a real
-  `confirmationToken` string at all.
+* `invalid` - the token is malformed, tampered with, signed with another
+  key, was never a real `confirmationToken` string at all, or was already
+  used (a token is accepted once).
 
-This gateway keeps no server-side session store: `confirmationToken` is a
-self-describing, checksummed capsule naming exactly the intent and entities
-it was issued for. A confirmation can therefore never be replayed to
+This gateway keeps no server-side session: `confirmationToken` is a
+self-describing capsule naming exactly the intent and entities it was issued
+for, signed with HMAC-SHA256 under a server key and carrying a random nonce.
+Only this gateway can mint one - knowing the format, or having seen a token,
+does not let anyone build a valid token for another intent - and each nonce is
+accepted once, so a token that was confirmed cannot be replayed during its 30
+seconds. The key is `HYDRA_UMC_VOICE_UI_CONFIRM_SECRET` (at least 16
+characters; the OS installer generates it with the other device secrets).
+Without it a random key is made per process, which is enough for a 30 second
+token: a restart only makes a pending confirmation ask to be repeated. The list
+of used nonces lives in memory and is bounded; when it is full the gateway
+refuses new confirmations instead of forgetting old ones. A confirmation can therefore never be replayed to
 authorize a *different*, later request - a changed parameter (a different
 mission, a different robot) always mints its own new, distinct token; the
 old one, if ever confirmed, still only ever confirms its own original,
