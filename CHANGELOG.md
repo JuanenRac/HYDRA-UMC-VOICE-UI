@@ -5,6 +5,11 @@ version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
 bumped manually only. See `bump_version.py`.
 
+## [0.1.7]
+
+- Maturity is functional: nothing here has been verified on real hardware yet.
+- The READMEs say, in the eight languages, what is planned and what has only been tested against fakes, emulators or fixtures, and carry a short safety and security status note.
+
 ## [0.1.6] - Negations spelled the way recognizers write them
 
 - **Intent parser:** a negation was only recognized in a few exact spellings, so "don't start mission alpha" written with a typographic apostrophe (the form phone keyboards and many recognizers produce), "shouldn't", "wouldn't", "won't", "isn't" or a plain "no" still produced a confirmation token for the command it denied. All apostrophe variants are now read as a plain one, any "...n't" contraction and "no"/"wont" count as negations, and the reply asks the operator to rephrase.

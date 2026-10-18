@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "ecosystem": "HYDRA-UMC",
   "name": "HYDRA-UMC-VOICE-UI",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "role": "service",
   "stack": "python",
   "technologies": [
@@ -11,7 +11,7 @@
     "Energy-gate VAD"
   ],
   "deployment_target": "cm5",
-  "maturity": "established",
+  "maturity": "functional",
   "family": "Cognitive AI Node",
   "parent": "HYDRA-UMC-COGNITIVE-NODE",
   "build": "python tools/build_test.py",
