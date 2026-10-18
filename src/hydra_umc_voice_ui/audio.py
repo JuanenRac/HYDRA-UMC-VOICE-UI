@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import array
 import wave
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -26,7 +27,7 @@ DEFAULT_MAX_WAV_DURATION_SECONDS = 300.0
 class AudioClip:
     """Real decoded PCM audio: one int16 sample per channel-interleaved frame."""
 
-    samples: tuple[int, ...]
+    samples: Sequence[int]
     sample_rate: int
     channels: int
 
@@ -84,10 +85,10 @@ def load_wav(
 
     samples = array.array("h")
     samples.frombytes(raw)
-    return AudioClip(samples=tuple(samples), sample_rate=sample_rate, channels=channels)
+    return AudioClip(samples=samples, sample_rate=sample_rate, channels=channels)
 
 
-def rms_energy(samples: tuple[int, ...]) -> float:
+def rms_energy(samples: Sequence[int]) -> float:
     """Real root-mean-square energy of a block of int16 samples."""
     if not samples:
         return 0.0

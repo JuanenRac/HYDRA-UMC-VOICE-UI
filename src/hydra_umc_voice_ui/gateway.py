@@ -287,6 +287,16 @@ def process_voice_turn(turn: VoiceTurn, *, now: datetime | None = None) -> Assis
         "normalizedText": normalize_text(turn.transcript),
         "matchedRules": sorted({match.name for match in classification.matches}),
     }
+    if classification.negated:
+        return AssistantReply(
+            request_id=turn.request_id,
+            text="That request contains a negation, so no action was taken. Please say what you want done, without \"not\" or \"never\".",
+            level="ATTENTION",
+            speak=True,
+            requires_confirmation=False,
+            intent=None,
+            interpretation=interpretation,
+        )
     if classification.is_no_match:
         return AssistantReply(
             request_id=turn.request_id,

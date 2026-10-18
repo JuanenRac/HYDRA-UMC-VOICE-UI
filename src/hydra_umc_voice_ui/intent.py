@@ -33,7 +33,13 @@ class Intent:
 _RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         INTENT_START_MISSION,
-        re.compile(r"\bstart\b.*\bmission\b(?:\s+(?P<mission_id>\w+))?", re.IGNORECASE),
+        # "start ... mission" with at most three words in between, and a mission
+        # id that is not a filler word ("start the mission now" has no id)
+        re.compile(
+            r"\bstart\b(?:\s+\w+){0,3}?\s+mission\b"
+            r"(?:\s+(?!(?:now|for|the|a|an|please|to|at|on|in|with|and|then|again|immediately)\b)(?P<mission_id>\w+))?",
+            re.IGNORECASE,
+        ),
     ),
     (INTENT_STOP, re.compile(r"\b(stop|halt|abort)\b", re.IGNORECASE)),
     (
@@ -92,6 +98,11 @@ def normalize_text(text: str) -> str:
     return _WHITESPACE.sub(" ", normalized).strip()
 
 
+# A command that is negated ("do not start the mission", "never stop") must not
+# be turned into the command it denies; the caller asks the operator to rephrase.
+_NEGATION = re.compile(r"\b(not|never|don't|dont|cannot|can't|cant|without)\b", re.IGNORECASE)
+
+
 @dataclass(frozen=True)
 class IntentClassification:
     """The real, honest outcome of `classify_intent()` - exactly one of
@@ -101,6 +112,8 @@ class IntentClassification:
     happens to be declared first)."""
 
     matches: tuple[Intent, ...]
+    # True when the text contains a negation word next to a recognized command
+    negated: bool = False
 
     @property
     def is_no_match(self) -> bool:
@@ -132,4 +145,7 @@ def classify_intent(text: str) -> IntentClassification:
             continue
         entities = {key: value for key, value in match.groupdict().items() if value is not None}
         matches.append(Intent(name=name, entities=entities))
-    return IntentClassification(matches=tuple(matches))
+    return IntentClassification(
+        matches=tuple(matches),
+        negated=bool(matches) and _NEGATION.search(normalized) is not None,
+    )

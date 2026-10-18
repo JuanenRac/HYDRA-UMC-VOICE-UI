@@ -44,7 +44,7 @@ def _run_analyze_audio(path: Path) -> int:
 
     try:
         clip = load_wav(path)
-    except (wave.Error, EOFError) as error:
+    except (wave.Error, EOFError, ValueError) as error:
         print(f"ERROR: not a valid PCM WAV file: {path} ({error})")
         return 1
     print(f"File: {path.name}")

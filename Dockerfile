@@ -16,7 +16,7 @@
 # docker-compose.yml as the "voice-ui" service.
 #
 # IMPORTANT: binding beyond loopback requires a real bearer token
-# (http_service.py's own open_gateway() raises ValueError otherwise, by
+# (http_service.py's own create_voice_gateway() raises ValueError otherwise, by
 # design - the same fail-closed gate the systemd unit is also subject
 # to). This image does NOT bake one in - pass a real secret at run time:
 #   docker run -e HYDRA_UMC_VOICE_UI_TOKEN=... hydra-umc-voice-ui:1.0.0

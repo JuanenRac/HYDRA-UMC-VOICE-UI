@@ -394,3 +394,11 @@ def test_the_configured_secret_must_be_long_enough(monkeypatch) -> None:
     assert gateway._load_confirmation_secret() == b"a-long-enough-secret"
     monkeypatch.delenv("HYDRA_UMC_VOICE_UI_CONFIRM_SECRET")
     assert len(gateway._load_confirmation_secret()) == 32
+
+
+def test_a_negated_request_is_answered_without_a_confirmation_token() -> None:
+    reply = process_voice_turn(_turn("do not start the mission"))
+    assert reply.intent is None
+    assert reply.requires_confirmation is False
+    assert reply.pending_confirmation is None
+    assert "negation" in reply.text

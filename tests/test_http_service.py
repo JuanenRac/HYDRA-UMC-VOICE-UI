@@ -272,3 +272,9 @@ def test_confirm_requires_the_same_bearer_token_as_turn() -> None:
             f"{base}/v1/voice/confirm", json.dumps({"confirmationToken": "x"}).encode("utf-8")
         )
         assert status == 401
+
+
+def test_an_idle_connection_is_dropped_by_the_handler_timeout() -> None:
+    from hydra_umc_voice_ui.http_service import VoiceGatewayHandler
+
+    assert VoiceGatewayHandler.timeout == 15.0

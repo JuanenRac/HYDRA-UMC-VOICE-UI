@@ -107,3 +107,17 @@ def test_serve_on_a_port_already_in_use_fails_cleanly(capsys: pytest.CaptureFixt
     assert exit_code == 1
     assert "ERROR" in captured.out
     assert str(port) in captured.out
+
+
+def test_analyze_audio_on_an_unsupported_wav_fails_cleanly(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    wav_path = tmp_path / "eight-bit.wav"
+    with wave.open(str(wav_path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(1)
+        wav_file.setframerate(SAMPLE_RATE)
+        wav_file.writeframes(bytes(100))
+
+    assert main(["analyze-audio", str(wav_path)]) == 1
+    assert "ERROR" in capsys.readouterr().out

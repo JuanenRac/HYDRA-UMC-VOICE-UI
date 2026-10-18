@@ -34,9 +34,15 @@ class VoiceGatewayServer(ThreadingHTTPServer):
 class VoiceGatewayHandler(BaseHTTPRequestHandler):
     server: VoiceGatewayServer
 
+    # Seconds a client may stay silent on its connection before the server
+    # drops it, so a client that connects and sends nothing cannot hold a
+    # handler thread forever. Socket I/O only.
+    timeout = 15.0
+
     def log_message(self, format: str, *args: object) -> None:
-        # Keep normal request logging concise and do not log Authorization.
-        print("[voice-gateway] " + (format % args))
+        # Quiet by default, like the rest of the family: neither the transcript
+        # nor the Authorization header may end up in a log.
+        pass
 
     def _write_json(self, status: HTTPStatus, payload: dict[str, object]) -> None:
         raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")

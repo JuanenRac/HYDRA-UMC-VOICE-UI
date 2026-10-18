@@ -37,7 +37,7 @@ Bare invocation (no subcommand) prints identity/version/role and exits `0`:
 
 ```
 $ hydra-umc-voice-ui
-HYDRA-UMC-VOICE-UI v0.1.0
+HYDRA-UMC-VOICE-UI v0.1.5
 Voice UI (Hailo-10) - local STT/TTS pipeline for hands-free robotic mission control.
 ```
 
@@ -60,7 +60,7 @@ For the current in-memory v0 front-end, `analyze-audio` accepts only 16-bit
 PCM WAV input up to **16 MiB decoded PCM** and **300 seconds**. The input is
 rejected before samples are read when either limit is exceeded; this keeps the
 local service bounded on CM5-class hardware. This is a deliberate safety limit,
-not a claim that the future streaming STT implementation is already present.
+not a claim that a speech-to-text engine is already present.
 
 Real WAV loading (sample rate, channels, duration, RMS energy) plus a v0
 energy-gate voice-activity detector. The fixtures below are built with
@@ -193,19 +193,19 @@ options:
 Runs the real local Watch voice-turn HTTP gateway (stdlib
 `ThreadingHTTPServer`, no external web framework). Started here for real
 on the default loopback host, confirmed live with a real `GET /health`,
-then stopped — the full websocket-style voice-turn protocol itself is
+then stopped — the HTTP voice-turn protocol itself is
 documented separately in `docs/WATCH_VOICE_GATEWAY.md` and is out of
 scope for this CLI reference:
 
 ```
-$ hydra-umc-voice-ui serve --port 8099
-HYDRA-UMC-VOICE-UI voice gateway listening on http://127.0.0.1:8099
+$ hydra-umc-voice-ui serve --port 8091
+HYDRA-UMC-VOICE-UI voice gateway listening on http://127.0.0.1:8091
 POST /v1/voice/turn accepts bounded text only; it never actuates robots.
 ```
 
 ```
-$ curl -s http://127.0.0.1:8099/health
-{"product":"HYDRA-UMC-VOICE-UI","version":"0.1.1","voiceTurnEndpoint":"/v1/voice/turn","voiceConfirmEndpoint":"/v1/voice/confirm","authRequired":false}
+$ curl -s http://127.0.0.1:8091/health
+{"product":"HYDRA-UMC-VOICE-UI","version":"0.1.5","voiceTurnEndpoint":"/v1/voice/turn","voiceConfirmEndpoint":"/v1/voice/confirm","authRequired":false}
 ```
 
 (stopped with Ctrl+C / SIGINT once confirmed — `serve` prints
@@ -215,7 +215,7 @@ Binding beyond loopback without a real bearer token is refused honestly
 rather than silently serving unauthenticated on a non-local interface:
 
 ```
-$ hydra-umc-voice-ui serve --host 0.0.0.0 --port 8099
+$ hydra-umc-voice-ui serve --host 0.0.0.0 --port 8091
 ERROR: HYDRA_UMC_VOICE_UI_TOKEN is required when binding beyond loopback
 $ echo $?
 1
@@ -237,5 +237,5 @@ does not run. `analyze-audio` and `parse-intent` are the real,
 hardware-independent pieces already in place: energy-gate VAD over a raw
 WAV file, and rule-based parsing over text some other component already
 transcribed. The `serve` gateway's own wire protocol (voice-turn request/
-response shape, auth, streaming) is documented separately in
+response shape, auth) is documented separately in
 `docs/WATCH_VOICE_GATEWAY.md`.

@@ -5,6 +5,15 @@ version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
 bumped manually only. See `bump_version.py`.
 
+## [0.1.5] - Negations, mission ids, lighter audio and a quiet, bounded HTTP handler
+
+- **Intent parser:** a negated command ("do not start the mission", "never start mission 5", "don't stop") is no longer turned into the command it denies: the reply asks the operator to rephrase and carries no confirmation token. "start" must now be within three words of "mission", and a filler word is no longer taken as the mission id ("start the mission now" has no id).
+- **Audio:** a decoded clip stays in a compact 16-bit array instead of a tuple of Python integers (about 18 times less memory for a long clip, which used to risk the service's memory ceiling).
+- **CLI:** `analyze-audio` on an unsupported WAV (8-bit, oversized) reports the error and exits 1 instead of ending with a traceback.
+- **HTTP service:** a client that connects and sends nothing is dropped after 15 seconds, and the handler no longer prints a line per request.
+- **Hardening and manifest:** the systemd unit gets `PrivateDevices=true`, and the manifest no longer lists speech-to-text and text-to-speech technologies that do not exist yet.
+- **Docs:** the CLI reference shows the current version and the real default port 8091 and no longer speaks of streaming, the Dockerfile comment names the real function, and the Watch gateway document says the confirmation relay in the Server is pending and that only English rules exist (85 tests).
+
 ## [0.1.4] - Confirmation tokens are signed and accepted once
 
 - **Signed confirmation tokens:** the `confirmationToken` that confirms a stop, a mission start or a go-home is now signed with HMAC-SHA256 under a server key (`HYDRA_UMC_VOICE_UI_CONFIRM_SECRET`, at least 16 characters; without it a random key is made per process and a restart only makes a pending confirmation ask to be repeated). The old token was a SHA-256 prefix of its own content with no secret, so anyone who knew the format could build a valid confirmation for any intent.

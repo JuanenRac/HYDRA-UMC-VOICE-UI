@@ -132,3 +132,18 @@ def test_classify_still_matches_vocative_robot_address() -> None:
 
     assert classification.is_unambiguous
     assert classification.matches[0].name == INTENT_STOP
+
+
+def test_a_negated_command_is_flagged_not_executed() -> None:
+    for text in ("do not start the mission", "never start mission 5", "don't stop"):
+        classification = classify_intent(text)
+        assert classification.negated, text
+    assert not classify_intent("start mission alpha").negated
+
+
+def test_mission_id_is_not_a_filler_word_and_start_must_be_close_to_mission() -> None:
+    assert parse_intent("start the mission now") == parse_intent("start the mission")
+    assert "mission_id" not in parse_intent("start the mission now").entities
+    assert "mission_id" not in parse_intent("start mission for robot 2").entities
+    assert parse_intent("start mission alpha").entities == {"mission_id": "alpha"}
+    assert parse_intent("start by telling me the long and detailed mission plan") is None

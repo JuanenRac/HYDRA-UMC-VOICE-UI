@@ -29,7 +29,9 @@ hydra-umc-voice-ui serve --host 127.0.0.1 --port 8091
 ```
 
 The production path is Watch -> paired Android transport -> authenticated
-HYDRA-UMC-SERVER -> loopback Voice UI. The Watch must not store this token or
+HYDRA-UMC-SERVER -> loopback Voice UI. (Today the Server relays only
+`/v1/voice/turn`; relaying `/v1/voice/confirm` is still pending there, so a
+confirmation token cannot yet complete a round trip in production.) The Watch must not store this token or
 contact Voice UI directly. The physical Wear transport remains a separate
 hardware integration; the Server-to-Voice UI relay is implemented and tested.
 
@@ -54,6 +56,12 @@ robot-health or motion-state claim. A recognised motion request is labelled
 `requiresConfirmation: true`; this v0 service does not dispatch robot commands.
 
 ### Confirming a motion request
+
+The confirmation round trip through the Server is pending (the Server does not
+relay `/v1/voice/confirm` yet), and the intent rules understand English only:
+the `locale` field is validated but not used to pick rules. A request that
+contains a negation ("do not start the mission") is answered with a request to
+rephrase and no confirmation token.
 
 A reply with `requiresConfirmation: true` also carries a real, bounded
 `confirmationToken` and `confirmationValiditySeconds` (30s by default) - the
