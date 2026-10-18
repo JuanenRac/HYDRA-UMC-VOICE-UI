@@ -18,6 +18,17 @@
 
 ---
 
+## 📋 速览
+
+| | |
+|---|---|
+| 版本 | `0.1.5` |
+| 成熟度 | 成熟 |
+| 测试 | 85 (`pytest tests/`) |
+| 技术栈 | Python / Rule-based intent parser / Energy-gate VAD |
+| 目标 | HYDRA-UMC 工作单元的 Raspberry Pi CM5 |
+| 真实硬件 | 尚未：此版本没有在真实硬件上运行的记录 |
+
 ## 1. 🛠️ 技术概述
 
 **HYDRA-UMC-VOICE-UI** 是 HYDRA-UMC 生态系统的本地语音交互层。它提供由

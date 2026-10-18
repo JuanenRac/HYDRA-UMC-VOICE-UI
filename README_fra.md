@@ -18,6 +18,17 @@
 
 ---
 
+## 📋 En un coup d'œil
+
+| | |
+|---|---|
+| Version | `0.1.5` |
+| Maturité | Établi |
+| Tests | 85 (`pytest tests/`) |
+| Technologie | Python / Rule-based intent parser / Energy-gate VAD |
+| Cible | Le Raspberry Pi CM5 d'une cellule HYDRA-UMC |
+| Sur matériel réel | Pas encore : aucune exécution sur du matériel réel n'est consignée pour cette version |
+
 ## 1. 🛠️ APERÇU TECHNIQUE
 
 **HYDRA-UMC-VOICE-UI** est la couche d'interaction vocale locale pour l'écosystème HYDRA-UMC. Il fournit un pipeline STT (Speech-to-Text) et TTS (Text-to-Speech) haute performance accéléré par le NPU Hailo-10.
