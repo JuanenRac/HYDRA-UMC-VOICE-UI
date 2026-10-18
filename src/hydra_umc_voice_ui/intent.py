@@ -100,7 +100,10 @@ def normalize_text(text: str) -> str:
 
 # A command that is negated ("do not start the mission", "never stop") must not
 # be turned into the command it denies; the caller asks the operator to rephrase.
-_NEGATION = re.compile(r"\b(not|never|don't|dont|cannot|can't|cant|without)\b", re.IGNORECASE)
+# Recognizers and phone keyboards write the apostrophe of "don't" in several
+# ways; they are all read as a plain one before looking for a negation.
+_APOSTROPHES = re.compile("[‘’‛ʼʹ′´`]")
+_NEGATION = re.compile(r"\b(?:not|never|no|dont|cannot|cant|wont|without|\w+n't)\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -147,5 +150,5 @@ def classify_intent(text: str) -> IntentClassification:
         matches.append(Intent(name=name, entities=entities))
     return IntentClassification(
         matches=tuple(matches),
-        negated=bool(matches) and _NEGATION.search(normalized) is not None,
+        negated=bool(matches) and _NEGATION.search(_APOSTROPHES.sub("'", normalized)) is not None,
     )

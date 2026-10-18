@@ -37,7 +37,7 @@ Bare invocation (no subcommand) prints identity/version/role and exits `0`:
 
 ```
 $ hydra-umc-voice-ui
-HYDRA-UMC-VOICE-UI v0.1.5
+HYDRA-UMC-VOICE-UI v0.1.6
 Voice UI (Hailo-10) - local STT/TTS pipeline for hands-free robotic mission control.
 ```
 
@@ -205,7 +205,7 @@ POST /v1/voice/turn accepts bounded text only; it never actuates robots.
 
 ```
 $ curl -s http://127.0.0.1:8091/health
-{"product":"HYDRA-UMC-VOICE-UI","version":"0.1.5","voiceTurnEndpoint":"/v1/voice/turn","voiceConfirmEndpoint":"/v1/voice/confirm","authRequired":false}
+{"product":"HYDRA-UMC-VOICE-UI","version":"0.1.6","voiceTurnEndpoint":"/v1/voice/turn","voiceConfirmEndpoint":"/v1/voice/confirm","authRequired":false}
 ```
 
 (stopped with Ctrl+C / SIGINT once confirmed — `serve` prints

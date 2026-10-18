@@ -5,6 +5,11 @@ version number follows this ecosystem's "odometer" scheme: PATCH +1 on
 every real build, rolling into MINOR past 9 (`0.0.9` -> `0.1.0`); MAJOR is
 bumped manually only. See `bump_version.py`.
 
+## [0.1.6] - Negations spelled the way recognizers write them
+
+- **Intent parser:** a negation was only recognized in a few exact spellings, so "don't start mission alpha" written with a typographic apostrophe (the form phone keyboards and many recognizers produce), "shouldn't", "wouldn't", "won't", "isn't" or a plain "no" still produced a confirmation token for the command it denied. All apostrophe variants are now read as a plain one, any "...n't" contraction and "no"/"wont" count as negations, and the reply asks the operator to rephrase.
+- 76 new tests (161 in all): negation spellings, hostile HTTP bodies and bearer forms, request-field limits, junk confirmation tokens, stereo and degenerate audio, and the serve command.
+
 ## [0.1.5] - Negations, mission ids, lighter audio and a quiet, bounded HTTP handler
 
 - **Intent parser:** a negated command ("do not start the mission", "never start mission 5", "don't stop") is no longer turned into the command it denies: the reply asks the operator to rephrase and carries no confirmation token. "start" must now be within three words of "mission", and a filler word is no longer taken as the mission id ("start the mission now" has no id).
