@@ -1,4 +1,4 @@
-# Changelog: HYDRA-UMC-VOICE-UI 🎙️
+# Changelog
 
 All notable changes to this project are documented here.
 
@@ -105,7 +105,6 @@ All notable changes to this project are documented here.
   "robot" left in. New regression tests in `test_intent.py`/
   `test_gateway.py`; the existing `test_status_turn_...` gateway test
   never asserted on `entities`/reply text, so this shipped untested.
-### Added
 - `audio.load_wav()` now enforces a bounded v0 PCM input contract: 16 MiB of
   decoded PCM and 300 seconds by default. Header metadata is validated before
   frame data is read, so a large recording is rejected deterministically
@@ -166,7 +165,6 @@ All notable changes to this project are documented here.
 
 ## [0.0.7] - Clean CLI errors for two unhandled real-input failures
 
-### Fixed
 - **`analyze-audio` on a corrupt/invalid WAV file** (`main.py`'s
   `_run_analyze_audio()`) - `audio.py`'s `load_wav()` opens the file with
   the stdlib `wave` module, which raises `wave.Error` (or `EOFError` on a
@@ -186,7 +184,6 @@ All notable changes to this project are documented here.
   reported the same way.
 - Both were found during internal testing, not from a user report.
 
-### Added
 - 2 new regression tests (`test_cli.py`) = 32 total: `analyze-audio`
   against a real invalid WAV file (plain text saved with a `.wav`
   extension) asserting a clean error and exit code 1 instead of a
@@ -195,14 +192,11 @@ All notable changes to this project are documented here.
 
 ## [0.0.6] - Ambiguity-aware intent classification, real text normalization
 
-### Added
-
 - **Real intent normalization** (`intent.py`'s `normalize_text()`) - Unicode NFKC (collapses compatibility forms a real speech-to-text transcript can emit, e.g. full-width Latin letters, to their ordinary ASCII equivalent), punctuation-noise stripping, and common filler-phrase removal ("please", "could you", ...), applied before classification so a transcript that's semantically identical to a known command is never treated as an honest non-match just because of how it was encoded or phrased.
 - **Real ambiguous-command detection** (`intent.py`'s `classify_intent()`/`IntentClassification`, new) - checks every rule (not first-match-wins like the existing `parse_intent()`, left untouched) and reports every one that genuinely matches. `gateway.py`'s `process_voice_turn()` now uses it: a real transcript matching more than one known command (e.g. one containing both "stop" and "status") gets a real, distinct clarification reply instead of being silently resolved to whichever rule happens to be declared first - the exact failure mode this gateway exists to prevent for a real motion command.
 - 10 new tests (`test_intent.py`, `test_gateway.py`) = 30 total, including a concrete ambiguous transcript, real NFKC full-width-Unicode normalization, and the gateway's new end-to-end ambiguous-turn rejection. `parse_intent()` and the existing motion-confirmation policy (`requiresConfirmation`, already real) are unchanged - this is a purely additive safety improvement.
 
 ## [0.0.5] - Real v0 audio front-end + rule-based intent parsing
-### Added
 - `audio.py` - real, stdlib-only 16-bit PCM WAV loading (`wave` + `array`,
   no numpy) and energy-gate voice-activity detection
   (`detect_voice_segments()`): splits a clip into real frames, computes
@@ -230,7 +224,6 @@ All notable changes to this project are documented here.
   none), intent-parsing coverage for every rule plus an unmatched-text
   case, and a real end-to-end CLI round-trip for both subcommands.
 
-### Fixed
 - Proactively reconfigures `stdout`/`stderr` to UTF-8 with a safe
   replace-on-error fallback in `main()`, before printing anything -
   applied up front after the same real bug (`UnicodeEncodeError` on a
@@ -238,20 +231,17 @@ All notable changes to this project are documented here.
   HYDRA-UMC-DOCS-QA this same session.
 
 ## [0.0.3]
-### Added
 - Copyright/license header on every source file and build/run script.
 - `CHANGELOG.md` (this file).
 - Extended documentation across `README.md` and its 4 translations:
   advanced technical/architecture section, detailed build/run
   troubleshooting, and a full "Related Projects" section.
 
-### Changed
 - Inline comments explaining the *why* behind non-obvious decisions
   (versioning scheme, src-layout, why this child has no hardware/
   firmware/os/models of its own).
 
 ## [0.0.0]
-### Added
 - Initial Python scaffolding: `pyproject.toml` (setuptools, src-layout),
   `src/hydra_umc_voice_ui/__init__.py` + `main.py` (real entry point -
   prints identity/version/role, exits 0).
