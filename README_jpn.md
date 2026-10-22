@@ -51,9 +51,7 @@
 * 🛡️ **ノイズキャンセリング：** 高い環境ノイズを伴う産業環境向けに最適化。*（計画中）*
 * 👨‍👩‍👧 **認知 AI ノードの子プロジェクト：**
   [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE) の下で 4 つの兄弟サービスの 1 つとして動作します（VLA-Engine、Semantic-Planner、Docs-QA と並んで）。独自のコピーを保持するのではなく、親プロジェクトの HydraOS イメージとモデルの重みを共有します。
-* 📦 **オドメーター式バージョン管理：** 実際のビルドのたびに
-  `pyproject.toml` 自身のバージョンが自動的に増加します
-  （`bump_version.py`）——手動でのバージョン編集は不要です。
+* 📦 **オドメーター式バージョン管理：** `pyproject.toml` のバージョンを上げるのは明示的な `bump` コマンド（`python tools/hydra_project_tool.py bump`、内部で `bump_version.py` を実行）だけです - ビルドがバージョンを変更することはありません。
 
 ---
 
@@ -110,7 +108,7 @@ HYDRA-UMC-VOICE-UI/
 ├── build/                    # ローカルビルド出力（git 管理外）
 ├── Dockerfile                # 認証付き HTTP ゲートウェイ用の最小コンテナイメージ（非 root）
 ├── pyproject.toml            # パッケージメタデータ（オドメーター式バージョン増加）
-├── bump_version.py           # ネイティブバージョンのオドメーター式インクリメント（build.sh/.bat が使用）
+├── bump_version.py           # オドメーター式バージョンインクリメント（明示的な `bump` コマンドのみが実行）
 ├── bump_manifest_version.py  # hydra-umc.project.json のバージョンをネイティブ版と同期(--sync)
 ├── build.sh / build.bat      # venv 作成、インストール（dev エクストラ付き）、インポート検証、テスト実行
 ├── build-test.sh / build-test.bat # tools/build_test.py の非破壊ラッパー（バージョン/マニフェスト/CHANGELOGは変更しない）
@@ -140,8 +138,7 @@ build.bat
 run.bat
 ```
 
-`build.sh`/`build.bat` は、実際の各ビルドの前にバージョンを増加させ
-（オドメーター方式、`bump_version.py` を参照）、実際のテストスイートを
+`build.sh`/`build.bat` はバージョンを変更せず（上げるのは `python tools/hydra_project_tool.py bump` だけです）、実際のテストスイートを
 実行します（`pytest tests/`）。引数なしの `run.sh` の予期される出力：
 
 ```text
