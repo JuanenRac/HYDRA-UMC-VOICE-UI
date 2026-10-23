@@ -15,6 +15,7 @@ from typing import Final
 
 from . import __version__
 from .gateway import VoiceTurn, VoiceTurnValidationError, confirm_pending_action, process_voice_turn
+from .ratelimit import DEFAULT_REQUESTS_PER_MINUTE, ClientRateLimiter
 
 MAX_BODY_BYTES: Final = 4 * 1024
 
@@ -26,9 +27,26 @@ def is_loopback_host(host: str) -> bool:
 class VoiceGatewayServer(ThreadingHTTPServer):
     """HTTP server carrying immutable runtime security configuration."""
 
-    def __init__(self, address: tuple[str, int], token: str | None) -> None:
+    def __init__(self, address: tuple[str, int], token: str | None, requests_per_minute: int | None = None) -> None:
         super().__init__(address, VoiceGatewayHandler)
         self.token = token
+        if requests_per_minute is None:
+            requests_per_minute = _configured_rate()
+        self.limiter = ClientRateLimiter(requests_per_minute)
+
+
+def _configured_rate() -> int:
+    """HYDRA_UMC_VOICE_UI_RATE_PER_MINUTE: requests one client address may make a minute; 0 turns the limit off."""
+    raw = os.environ.get("HYDRA_UMC_VOICE_UI_RATE_PER_MINUTE", "")
+    if not raw:
+        return DEFAULT_REQUESTS_PER_MINUTE
+    try:
+        value = int(raw)
+    except ValueError as error:
+        raise ValueError("HYDRA_UMC_VOICE_UI_RATE_PER_MINUTE must be a whole number (0 turns the limit off)") from error
+    if value < 0:
+        raise ValueError("HYDRA_UMC_VOICE_UI_RATE_PER_MINUTE must not be negative")
+    return value
 
 
 class VoiceGatewayHandler(BaseHTTPRequestHandler):
@@ -75,6 +93,10 @@ class VoiceGatewayHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API name
         if self.path not in ("/v1/voice/turn", "/v1/voice/confirm"):
             self._write_json(HTTPStatus.NOT_FOUND, {"error": "not found"})
+            return
+        allowed, wait = self.server.limiter.allow(self.client_address[0])
+        if not allowed:
+            self._write_json(HTTPStatus.TOO_MANY_REQUESTS, {"error": "too many requests from this address", "retryAfterSeconds": round(wait, 1)})
             return
         if not self._is_authorized():
             self._write_json(HTTPStatus.UNAUTHORIZED, {"error": "valid bearer token required"})

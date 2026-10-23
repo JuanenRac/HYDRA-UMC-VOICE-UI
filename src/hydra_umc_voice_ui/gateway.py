@@ -58,8 +58,9 @@ REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 CONFIRMATION_VALIDITY_SECONDS = 30.0
 
 MIN_CONFIRMATION_SECRET_LENGTH = 16
-# a token is accepted once; this bounds the memory the used-token list may take
-MAX_USED_CONFIRMATIONS = 4096
+# a token is accepted once; this bounds the memory the used-token list may take (about 100 bytes each). One client
+# cannot fill it: the HTTP service limits how many requests an address may make a minute (ratelimit.py).
+MAX_USED_CONFIRMATIONS = 16384
 
 
 def _load_confirmation_secret() -> bytes:

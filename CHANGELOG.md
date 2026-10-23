@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **One client cannot fill the used-confirmation list any more**: the HTTP service limits the requests of each client address to 120 a minute (`HYDRA_UMC_VOICE_UI_RATE_PER_MINUTE`; 0 turns it off; a bad value stops the service with a clear message) and answers `429` with `retryAfterSeconds` past it; the addresses remembered are bounded too. The used-token list holds 16384 nonces instead of 4096. Before, a holder of the bearer token could issue and confirm 4096 tokens inside their 30 seconds and make every legitimate confirmation wait.
+- **`parse-intent` shows what the gateway would do**: it uses the same `classify_intent()` (normalised text, every rule checked) and says when the text is negated or ambiguous, where it used to apply the older first-match-wins parser to the raw text and give a different answer.
+- 8 new tests (169 in all).
 - Building no longer changes the version; raising it is the explicit `bump` command (`python tools/hydra_project_tool.py bump`). The build scripts only report the version they built, and CI fails if a build script runs a bump.
 - The build and run scripts use the Python of the `.venv` directly instead of an activate script, and create the venv with the `py` launcher when there is one; CI fails if a script activates a venv.
 - The banner follows the animated style of the ecosystem banners, with the name, the kind and the technologies of the project.

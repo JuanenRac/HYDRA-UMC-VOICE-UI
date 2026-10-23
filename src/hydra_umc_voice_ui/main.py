@@ -23,7 +23,7 @@ from pathlib import Path
 from . import __version__
 from .audio import detect_voice_segments, load_wav, rms_energy
 from .http_service import create_voice_gateway
-from .intent import parse_intent
+from .intent import classify_intent
 
 PROJECT_NAME = "HYDRA-UMC-VOICE-UI"
 ROLE = (
@@ -65,12 +65,22 @@ def _run_analyze_audio(path: Path) -> int:
 
 
 def _run_parse_intent(text: str) -> int:
-    intent = parse_intent(text)
-    if intent is None:
+    """The same classification the gateway applies (normalised text, every rule checked, a negation or an
+    ambiguity reported instead of guessed), so this command shows what the gateway would do with the text."""
+    classification = classify_intent(text)
+    if classification.is_no_match:
         print(f'No matching intent for: "{text}"')
         print("(v0 is a real rule-based parser over a small command vocabulary - an honest miss, not a guess.)")
         return 0
+    if classification.negated:
+        print(f'Negated: "{text}" names a command but contains a negation, so the gateway takes no action.')
+        return 0
+    if classification.is_ambiguous:
+        names = ", ".join(sorted({match.name for match in classification.matches}))
+        print(f'Ambiguous: "{text}" matches more than one command ({names}); the gateway asks the operator to clarify.')
+        return 0
 
+    intent = classification.matches[0]
     print(f'Intent: {intent.name}')
     if intent.entities:
         for key, value in intent.entities.items():

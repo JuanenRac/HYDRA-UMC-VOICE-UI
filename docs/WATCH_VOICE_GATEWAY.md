@@ -102,8 +102,10 @@ seconds. The key is `HYDRA_UMC_VOICE_UI_CONFIRM_SECRET` (at least 16
 characters; the OS installer generates it with the other device secrets).
 Without it a random key is made per process, which is enough for a 30 second
 token: a restart only makes a pending confirmation ask to be repeated. The list
-of used nonces lives in memory and is bounded; when it is full the gateway
-refuses new confirmations instead of forgetting old ones. A confirmation can therefore never be replayed to
+of used nonces lives in memory and is bounded (16384, about 100 bytes each); when it is full the gateway
+refuses new confirmations instead of forgetting old ones. So that one client cannot fill it, the HTTP service
+limits how many requests an address may make a minute (120 by default, `HYDRA_UMC_VOICE_UI_RATE_PER_MINUTE`,
+0 turns the limit off): past it the answer is `429` with `retryAfterSeconds`. A confirmation can therefore never be replayed to
 authorize a *different*, later request - a changed parameter (a different
 mission, a different robot) always mints its own new, distinct token; the
 old one, if ever confirmed, still only ever confirms its own original,

@@ -121,3 +121,14 @@ def test_analyze_audio_on_an_unsupported_wav_fails_cleanly(
 
     assert main(["analyze-audio", str(wav_path)]) == 1
     assert "ERROR" in capsys.readouterr().out
+
+
+def test_parse_intent_says_what_the_gateway_would_do(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["parse-intent", "do not stop"]) == 0
+    assert "Negated" in capsys.readouterr().out
+    assert main(["parse-intent", "stop and give me the status"]) == 0
+    output = capsys.readouterr().out
+    assert "Ambiguous" in output and "status" in output and "stop" in output
+    # the text is normalised like the gateway does: filler words and punctuation do not hide the command
+    assert main(["parse-intent", "Could you please go home!"]) == 0
+    assert "Intent: go_home" in capsys.readouterr().out
