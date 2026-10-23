@@ -165,9 +165,9 @@ run.bat parse-intent "status of robot 3"
 
 ## 🎙️ WATCH 语音网关（v0）
 
-`python -m hydra_umc_voice_ui.main serve` 为已配对的 HYDRA-UMC-WATCH 集成提供有意限制的本地 HTTP 网关：`GET /health` 和 `POST /v1/voice/turn`。网关会验证类型化的 `voice_turn` 负载，使用现有的确定性意图解析器并返回 `assistant_reply`；它不控制机器人硬件。
+`python -m hydra_umc_voice_ui.main serve` 为已配对的 HYDRA-UMC-WATCH 集成提供有意限制的本地 HTTP 网关：`GET /health`、`POST /v1/voice/turn` 和 `POST /v1/voice/confirm`。网关会验证类型化的 `voice_turn` 负载，使用现有的确定性意图解析器并返回 `assistant_reply`；它不控制机器人硬件。
 
-回环开发可在无令牌的情况下运行。非回环绑定要求 `HYDRA_UMC_VOICE_UI_TOKEN` 以及匹配的 `Authorization: Bearer` 标头。该 API 绝不传输原始音频，且与运动相关的意图始终返回 `requiresConfirmation: true`。
+回环开发可在无令牌的情况下运行。非回环绑定要求 `HYDRA_UMC_VOICE_UI_TOKEN` 以及匹配的 `Authorization: Bearer` 标头。该 API 绝不传输原始音频，且与运动相关的意图始终返回 `requiresConfirmation: true`，并附带一个真实且有限定的 `confirmationToken`——Watch 客户端会把它回传给 `POST /v1/voice/confirm`，后者报告 `confirmed`/`expired`/`invalid`（绝不是单纯的布尔值），自身不会派发任何内容。完整契约见下文 [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) 的确认部分。
 
 一段真正同时匹配多个已知命令的转录文本会被拒绝，并返回一个真实、明确区分的回复，而不是被悄悄地解析为单一的理解结果：
 

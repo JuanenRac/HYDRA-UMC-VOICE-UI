@@ -169,9 +169,9 @@ run.bat parse-intent "status of robot 3"
 
 ## 🎙️ WATCH 音声ゲートウェイ（v0）
 
-`python -m hydra_umc_voice_ui.main serve` は、ペアリングされた HYDRA-UMC-WATCH 統合用に意図的に制限されたローカル HTTP ゲートウェイを公開します。エンドポイントは `GET /health` と `POST /v1/voice/turn` です。ゲートウェイは型付き `voice_turn` ペイロードを検証し、既存の決定論的なインテントパーサーを使用して `assistant_reply` を返します。ロボットハードウェアを制御するものではありません。
+`python -m hydra_umc_voice_ui.main serve` は、ペアリングされた HYDRA-UMC-WATCH 統合用に意図的に制限されたローカル HTTP ゲートウェイを公開します。エンドポイントは `GET /health`、`POST /v1/voice/turn`、`POST /v1/voice/confirm` です。ゲートウェイは型付き `voice_turn` ペイロードを検証し、既存の決定論的なインテントパーサーを使用して `assistant_reply` を返します。ロボットハードウェアを制御するものではありません。
 
-ループバック開発はトークンなしで実行できます。ループバック以外へのバインドには `HYDRA_UMC_VOICE_UI_TOKEN` と一致する `Authorization: Bearer` ヘッダーが必要です。この API が生の音声を転送することはなく、移動に関係するインテントは常に `requiresConfirmation: true` を返します。
+ループバック開発はトークンなしで実行できます。ループバック以外へのバインドには `HYDRA_UMC_VOICE_UI_TOKEN` と一致する `Authorization: Bearer` ヘッダーが必要です。この API が生の音声を転送することはなく、移動に関係するインテントは常に `requiresConfirmation: true` を、実在し範囲が限定された `confirmationToken` とともに返します。Watch クライアントはそれを `POST /v1/voice/confirm` に返送し、`confirmed`/`expired`/`invalid`（単なる真偽値ではない）が報告されます。このエンドポイント自体は何も送出しません。完全な契約は下の [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) の確認セクションを参照してください。
 
 複数の既知コマンドに本当に一致する文字起こしは、単一の解釈へ黙って解決されるのではなく、実在の、明確に区別される応答とともに拒否されます：
 

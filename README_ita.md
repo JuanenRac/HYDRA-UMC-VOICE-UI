@@ -239,9 +239,9 @@ run.bat parse-intent "status of robot 3"
 
 ## 🎙️ GATEWAY VOCALE PER WATCH (v0)
 
-`python -m hydra_umc_voice_ui.main serve` espone un gateway HTTP locale e volutamente limitato per un'integrazione associata con HYDRA-UMC-WATCH: `GET /health` e `POST /v1/voice/turn`. Il gateway convalida il payload tipizzato `voice_turn`, usa l'analizzatore di intenti deterministico esistente e restituisce `assistant_reply`; non controlla hardware del robot.
+`python -m hydra_umc_voice_ui.main serve` espone un gateway HTTP locale e volutamente limitato per un'integrazione associata con HYDRA-UMC-WATCH: `GET /health`, `POST /v1/voice/turn` e `POST /v1/voice/confirm`. Il gateway convalida il payload tipizzato `voice_turn`, usa l'analizzatore di intenti deterministico esistente e restituisce `assistant_reply`; non controlla hardware del robot.
 
-Lo sviluppo in loopback può essere eseguito senza token. Un bind non-loopback richiede `HYDRA_UMC_VOICE_UI_TOKEN` e un'intestazione `Authorization: Bearer` corrispondente. Questa API non invia mai audio grezzo e gli intenti relativi al movimento restituiscono sempre `requiresConfirmation: true`.
+Lo sviluppo in loopback può essere eseguito senza token. Un bind non-loopback richiede `HYDRA_UMC_VOICE_UI_TOKEN` e un'intestazione `Authorization: Bearer` corrispondente. Questa API non invia mai audio grezzo e gli intenti relativi al movimento restituiscono sempre `requiresConfirmation: true` insieme a un `confirmationToken` reale e limitato: il client Watch lo rimanda a `POST /v1/voice/confirm`, che riporta `confirmed`/`expired`/`invalid` (mai un semplice booleano) senza inviare nulla da sé. Vedi la sezione sulla conferma di [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) più sotto per il contratto completo.
 
 Una trascrizione che corrisponde realmente a più di un comando noto viene rifiutata con una risposta reale e distinta invece di essere risolta silenziosamente in un'unica interpretazione:
 
