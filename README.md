@@ -26,7 +26,7 @@
 |---|---|
 | Version | `0.1.7` |
 | Maturity | Functional |
-| Tests | 85 (`pytest tests/`) |
+| Tests | 174 (`pytest tests/`) |
 | Stack | Python / Rule-based intent parser / Energy-gate VAD |
 | Target | The Raspberry Pi CM5 of a HYDRA-UMC cell |
 | On real hardware | Not yet: no run on real hardware is recorded for this version |
@@ -44,6 +44,7 @@ It allows operators to control robotic missions, query system status, and receiv
 * 🧠 **NLU Parser (v0):** Real rule-based intent/entity extraction from recognized text for the Semantic Planner. *(implemented as regex rules over a small real command vocabulary - not a trained ML model; see BUILD & RUN below)*
 * 🔀 **Ambiguity-Aware Classification:** `classify_intent()` normalizes text (Unicode NFKC, filler/punctuation stripping) and rejects a transcript that genuinely matches more than one known command instead of silently guessing one. *(implemented; used by the Watch voice gateway below)*
 * 🔏 **Signed, single-use confirmations (v0):** the `confirmationToken` that confirms a stop, a mission start or a go-home is signed with HMAC-SHA256 under a server key (`HYDRA_UMC_VOICE_UI_CONFIRM_SECRET`, at least 16 characters; without it a random key is made per process), carries a random nonce, and is accepted once: a second use of the same token, a token for another intent assembled by hand, or one signed with another key is refused as `invalid`. Before, the token was a SHA-256 prefix of its own content with no secret, so anyone who knew the format could build a valid confirmation, and a valid one could be replayed during its 30 seconds. The OS installer generates the key with the other device secrets. *(implemented)*
+* 🛑 **A spoken stop is never held back (server setting):** by default a stop request is answered at once, with no confirmation token and `priority: safety-stop` so a consumer can turn it into a controlled stop (it never replaces the physical E-STOP); starting a movement is still confirmed. `HYDRA_UMC_VOICE_UI_STOP_REQUIRES_CONFIRMATION=1` brings the confirmation of a stop back. *(implemented)*
 * 🛡️ **Noise Cancellation:** Optimized for industrial environments with high ambient noise. *(planned)*
 * 👨‍👩‍👧 **Cognitive AI Node Child:** Runs as one of four sibling services
   under [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE)

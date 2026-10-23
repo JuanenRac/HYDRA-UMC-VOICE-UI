@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A spoken stop is no longer held back by a confirmation.** By default a stop request is answered at once with no confirmation token and `priority: safety-stop` in the reply (it still never replaces the physical E-STOP); starting a movement is confirmed as before. The new server setting `HYDRA_UMC_VOICE_UI_STOP_REQUIRES_CONFIRMATION=1` brings the confirmation of a stop back.
 - **One client cannot fill the used-confirmation list any more**: the HTTP service limits the requests of each client address to 120 a minute (`HYDRA_UMC_VOICE_UI_RATE_PER_MINUTE`; 0 turns it off; a bad value stops the service with a clear message) and answers `429` with `retryAfterSeconds` past it; the addresses remembered are bounded too. The used-token list holds 16384 nonces instead of 4096. Before, a holder of the bearer token could issue and confirm 4096 tokens inside their 30 seconds and make every legitimate confirmation wait.
 - **`parse-intent` shows what the gateway would do**: it uses the same `classify_intent()` (normalised text, every rule checked) and says when the text is negated or ambiguous, where it used to apply the older first-match-wins parser to the raw text and give a different answer.
 - 8 new tests (169 in all).

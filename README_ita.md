@@ -26,7 +26,7 @@
 |---|---|
 | Versione | `0.1.7` |
 | Maturità | Funzionale |
-| Test | 85 (`pytest tests/`) |
+| Test | 174 (`pytest tests/`) |
 | Tecnologia | Python / Rule-based intent parser / Energy-gate VAD |
 | Destinazione | Il Raspberry Pi CM5 di una cella HYDRA-UMC |
 | Su hardware reale | Non ancora: per questa versione non risulta alcuna esecuzione su hardware reale |
@@ -44,6 +44,7 @@ Consente agli operatori di controllare le missioni robotiche, interrogare lo sta
 * 🧠 **Parser NLU (v0):** Estrazione reale di intenti/entità dal testo riconosciuto, basata su regole, per il Semantic Planner. *(implementato come regole regex su un piccolo vocabolario reale di comandi - non un modello ML addestrato; vedi BUILD ED ESECUZIONE sotto)*
 * 🔀 **Classificazione consapevole dell'ambiguità:** `classify_intent()` normalizza il testo (Unicode NFKC, rimozione di riempitivi/punteggiatura) e rifiuta una trascrizione che corrisponde realmente a più di un comando noto invece di indovinarne uno in silenzio. *(implementato; usato dal gateway vocale per Watch più sotto)*
 * 🔏 **Conferme firmate e monouso (v0):** il `confirmationToken` che conferma uno stop, l'avvio di una missione o il ritorno alla base è firmato con HMAC-SHA256 sotto una chiave del server (`HYDRA_UMC_VOICE_UI_CONFIRM_SECRET`, almeno 16 caratteri; senza di essa viene creata una chiave casuale per processo), porta un nonce casuale e viene accettato una sola volta: un secondo uso dello stesso token, un token per un'altra intenzione costruito a mano o firmato con un'altra chiave viene rifiutato come `invalid`. Prima il token era un prefisso SHA-256 del proprio contenuto senza segreto, quindi chiunque conoscesse il formato poteva costruire una conferma valida, e una valida poteva essere ripetuta durante i suoi 30 secondi. L'installatore di OS genera la chiave insieme agli altri segreti del dispositivo. *(implementato)*
+* 🛑 **Un arresto vocale non viene mai trattenuto (impostazione del server):** per impostazione predefinita una richiesta di arresto riceve risposta immediata, senza token di conferma e con `priority: safety-stop` perché un consumatore la trasformi in un arresto controllato (non sostituisce mai l'arresto di emergenza fisico); l'avvio di un movimento resta confermato. `HYDRA_UMC_VOICE_UI_STOP_REQUIRES_CONFIRMATION=1` riporta la conferma dell'arresto. *(implementato)*
 * 🛡️ **Cancellazione del rumore:** Ottimizzato per ambienti industriali con elevato rumore ambientale. *(pianificato)*
 * 👨‍👩‍👧 **Figlio del Cognitive AI Node:** Gira come uno dei quattro
   servizi fratelli sotto [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE)

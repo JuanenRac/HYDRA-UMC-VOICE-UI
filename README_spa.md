@@ -26,7 +26,7 @@
 |---|---|
 | Versión | `0.1.7` |
 | Madurez | Funcional |
-| Tests | 85 (`pytest tests/`) |
+| Tests | 174 (`pytest tests/`) |
 | Tecnología | Python / Rule-based intent parser / Energy-gate VAD |
 | Destino | La Raspberry Pi CM5 de una celda HYDRA-UMC |
 | En hardware real | Todavía no: no consta ninguna ejecución en hardware real para esta versión |
@@ -44,6 +44,7 @@ Permite a los operadores controlar misiones robóticas, consultar el estado del 
 * 🧠 **Parser NLU (v0):** Extraccion real de intencion/entidades del texto reconocido, basada en reglas, para el Planificador Semántico. *(implementado como reglas regex sobre un pequeño vocabulario real de comandos - no un modelo de ML entrenado; ver BUILD Y EJECUCION abajo)*
 * 🔀 **Clasificación Consciente de Ambigüedad:** `classify_intent()` normaliza el texto (Unicode NFKC, eliminación de muletillas/puntuación) y rechaza una transcripción que realmente coincide con más de un comando conocido en vez de adivinar uno en silencio. *(implementado; usado por el gateway de voz para Watch más abajo)*
 * 🔏 **Confirmaciones firmadas y de un solo uso (v0):** el `confirmationToken` que confirma una parada, el inicio de una misión o volver a casa va firmado con HMAC-SHA256 bajo una clave del servidor (`HYDRA_UMC_VOICE_UI_CONFIRM_SECRET`, de al menos 16 caracteres; sin ella se crea una clave aleatoria por proceso), lleva un nonce aleatorio y se acepta una sola vez: un segundo uso del mismo token, un token de otra intención armado a mano o uno firmado con otra clave se rechaza como `invalid`. Antes el token era un prefijo SHA-256 de su propio contenido sin secreto, así que cualquiera que conociera el formato podía fabricar una confirmación válida, y una válida podía repetirse durante sus 30 segundos. El instalador de OS genera la clave junto con los demás secretos del dispositivo. *(implementado)*
+* 🛑 **Una parada por voz nunca se retiene (ajuste del servidor):** por defecto una petición de parada se responde al instante, sin token de confirmación y con `priority: safety-stop` para que un consumidor la convierta en una parada controlada (nunca sustituye a la parada de emergencia física); iniciar un movimiento sigue confirmándose. `HYDRA_UMC_VOICE_UI_STOP_REQUIRES_CONFIRMATION=1` devuelve la confirmación de la parada. *(implementado)*
 * 🛡️ **Cancelación de Ruido:** Optimizado para entornos industriales con alto ruido ambiental. *(planeado)*
 * 👨‍👩‍👧 **Hijo del Cognitive AI Node:** Corre como uno de los cuatro
   servicios hermanos bajo [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE)

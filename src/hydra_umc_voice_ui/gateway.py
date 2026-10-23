@@ -63,6 +63,18 @@ MIN_CONFIRMATION_SECRET_LENGTH = 16
 MAX_USED_CONFIRMATIONS = 16384
 
 
+STOP_CONFIRMATION_ENV = "HYDRA_UMC_VOICE_UI_STOP_REQUIRES_CONFIRMATION"
+
+
+def stop_requires_confirmation_default(environ: dict[str, str] | None = None) -> bool:
+    """Whether a spoken stop must be confirmed (server setting; off unless the variable is exactly "1").
+
+    A stop is never held back by default: confirming is for starting a movement, and a command to stop that waits for a second
+    answer can arrive too late. A deployment that prefers to confirm it can switch it on."""
+    env = os.environ if environ is None else environ
+    return env.get(STOP_CONFIRMATION_ENV, "").strip() == "1"
+
+
 def _load_confirmation_secret() -> bytes:
     """The key that signs confirmation tokens. `HYDRA_UMC_VOICE_UI_CONFIRM_SECRET`
     pins it (so tokens survive a restart or a second worker); without it a random
@@ -230,6 +242,9 @@ class AssistantReply:
     # (as `confirmationToken`) on the turn that confirms this specific
     # action.
     pending_confirmation: PendingConfirmation | None = None
+    # Set to "safety-stop" on a stop request answered without a confirmation, so a consumer can give it priority
+    # and translate it into a controlled stop (it never replaces the physical E-STOP).
+    priority: str | None = None
     # How the reply was reached, so what happens next can be traced back to
     # what was heard: the text as received, the text the rules actually saw
     # after normalization, and the name of every rule that matched. Present
@@ -258,6 +273,8 @@ class AssistantReply:
             "requiresConfirmation": self.requires_confirmation,
             "visualState": self.visual_state,
         }
+        if self.priority is not None:
+            payload["priority"] = self.priority
         if self.intent is not None:
             payload["intent"] = {"name": self.intent.name, "entities": self.intent.entities}
         if self.interpretation is not None:
@@ -268,7 +285,7 @@ class AssistantReply:
         return payload
 
 
-def process_voice_turn(turn: VoiceTurn, *, now: datetime | None = None) -> AssistantReply:
+def process_voice_turn(turn: VoiceTurn, *, now: datetime | None = None, stop_requires_confirmation: bool | None = None) -> AssistantReply:
     """Parse one Watch request and return an honest, non-actuating reply.
 
     Uses the ambiguity-aware `classify_intent()` rather than the legacy
@@ -280,7 +297,13 @@ def process_voice_turn(turn: VoiceTurn, *, now: datetime | None = None) -> Assis
 
     `now` defaults to the real current UTC time - overridable so a test
     can issue a `PendingConfirmation` at a known instant.
+
+    A stop is answered without a confirmation unless `stop_requires_confirmation`
+    (default: the HYDRA_UMC_VOICE_UI_STOP_REQUIRES_CONFIRMATION server setting, off)
+    says otherwise: only starting a movement has to be confirmed.
     """
+    if stop_requires_confirmation is None:
+        stop_requires_confirmation = stop_requires_confirmation_default()
     now = now if now is not None else datetime.now(timezone.utc)
     classification = classify_intent(turn.transcript)
     interpretation: dict[str, object] = {
@@ -340,6 +363,18 @@ def process_voice_turn(turn: VoiceTurn, *, now: datetime | None = None) -> Assis
     elif intent.name == INTENT_GO_HOME:
         text = "Go-home request understood. No motion is executed until an authenticated primary control confirms it."
     elif intent.name == INTENT_STOP:
+        if not stop_requires_confirmation:
+            # Not held back: a stop that waits for a second answer can arrive too late.
+            return AssistantReply(
+                request_id=turn.request_id,
+                text="Stop request understood and sent without waiting for a confirmation. The physical E-STOP remains the immediate safety action.",
+                level="WARNING",
+                speak=True,
+                requires_confirmation=False,
+                intent=intent,
+                priority="safety-stop",
+                interpretation=interpretation,
+            )
         text = "Stop request understood. Use the physical E-STOP or authenticated primary control for immediate safety action."
     else:  # Defensive: parse_intent may gain a new rule before this policy does.
         text = "The request was recognized but needs an updated safety policy before it can be handled."
