@@ -57,8 +57,8 @@ robot-health or motion-state claim. A recognised motion request is labelled
 
 ### Confirming a motion request
 
-The confirmation round trip through the Server is pending (the Server does not
-relay `/v1/voice/confirm` yet), and the intent rules understand English only:
+The Server relays the round trip (`POST /api/voice/turn` and `POST /api/voice/confirm`, with the
+session of the signed-in user as the subject), and the intent rules understand English only:
 the `locale` field is validated but not used to pick rules. A request that
 contains a negation ("do not start the mission") is answered with a request to
 rephrase and no confirmation token.
@@ -76,6 +76,21 @@ once the human actually confirms:
 ```json
 {"type": "confirmation_result", "status": "confirmed", "reason": "start_mission confirmed 4.0s after being requested - execution still requires the authenticated primary control", "requestId": "watch-voice-002", "intent": {"name": "start_mission", "entities": {"mission_id": "alpha"}}, "ageSeconds": 4.0}
 ```
+
+The request may also name who is asking, which the relaying Server fills in from the signed-in session and never from the client:
+
+```json
+{"confirmationToken": "<the exact string from the earlier reply>", "subject": "alice"}
+```
+
+A turn that named a `subject` (`"subject": "alice"` next to `requestId`) gets a token that carries it, and that token confirms only for
+the same subject; asking with another subject, or with none, is `invalid` and does not use the token up. A token that names nobody
+confirms as before unless `HYDRA_UMC_VOICE_UI_REQUIRE_SUBJECT=1`, which also refuses a turn that names nobody.
+
+A confirmed result also has `subject`, `confirmedAtUtc` and `nonce`; when `HYDRA_UMC_VOICE_UI_RESULT_KEY` (16 characters or more, the
+same value the Server holds) is set it has a `signature` too: HMAC-SHA256, in hexadecimal, over the canonical JSON (keys sorted, no
+spaces, UTF-8) of the fields `type`, `status`, `requestId`, `intent`, `subject`, `confirmedAtUtc` and `nonce`. The text of `reason` and
+the age are not signed. The Server checks it before it believes a confirmed result.
 
 `status` is one of:
 

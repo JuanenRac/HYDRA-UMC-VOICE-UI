@@ -75,6 +75,48 @@ def stop_requires_confirmation_default(environ: dict[str, str] | None = None) ->
     return env.get(STOP_CONFIRMATION_ENV, "").strip() == "1"
 
 
+SUBJECT_PATTERN = re.compile(r"^[A-Za-z0-9_.@:+-]{1,128}$")
+REQUIRE_SUBJECT_ENV = "HYDRA_UMC_VOICE_UI_REQUIRE_SUBJECT"
+RESULT_KEY_ENV = "HYDRA_UMC_VOICE_UI_RESULT_KEY"
+MIN_RESULT_KEY_LENGTH = 16
+
+
+def require_subject_default(environ: dict[str, str] | None = None) -> bool:
+    """Must every turn and every confirmation name who asked (server setting; off unless the variable is exactly "1")?
+
+    When a turn names its subject (the server that relays it passes the signed-in user) the confirmation is bound to that subject
+    whatever this says. Switching this on also refuses a turn or a confirmation that names nobody."""
+    env = os.environ if environ is None else environ
+    return env.get(REQUIRE_SUBJECT_ENV, "").strip() == "1"
+
+
+def result_key(environ: dict[str, str] | None = None) -> bytes | None:
+    """The key that signs a confirmed result so the server that relays it can check it (None: results are not signed).
+
+    HYDRA_UMC_VOICE_UI_RESULT_KEY, 16 characters or more, the same value the relaying server holds. It is not the key of the
+    confirmation tokens, which never leaves this process."""
+    env = os.environ if environ is None else environ
+    configured = env.get(RESULT_KEY_ENV, "")
+    if not configured:
+        return None
+    if len(configured) < MIN_RESULT_KEY_LENGTH:
+        raise ValueError(f"{RESULT_KEY_ENV} must be at least {MIN_RESULT_KEY_LENGTH} characters")
+    return configured.encode("utf-8")
+
+
+SIGNED_FIELDS = ("type", "status", "requestId", "intent", "subject", "confirmedAtUtc", "nonce")
+
+
+def sign_result(payload: dict[str, object], key: bytes) -> str:
+    """HMAC-SHA256 (hex) over the canonical JSON (keys sorted, no spaces, UTF-8) of the fields in SIGNED_FIELDS.
+
+    Only what states the confirmation is signed, never the free text of the reason or the age, so a verifier in another language
+    rebuilds exactly the same bytes."""
+    body = {name: payload[name] for name in SIGNED_FIELDS if name in payload}
+    raw = json.dumps(body, separators=(",", ":"), sort_keys=True, ensure_ascii=False).encode("utf-8")
+    return hmac.new(key, raw, hashlib.sha256).hexdigest()
+
+
 def _load_confirmation_secret() -> bytes:
     """The key that signs confirmation tokens. `HYDRA_UMC_VOICE_UI_CONFIRM_SECRET`
     pins it (so tokens survive a restart or a second worker); without it a random
@@ -142,14 +184,18 @@ class PendingConfirmation:
     entities: tuple[tuple[str, str], ...]
     issued_at: datetime
     nonce: str = field(default_factory=lambda: secrets.token_hex(8))
+    # who asked (the signed-in user the relaying server named); empty when nobody was named. A confirmation with a subject
+    # confirms only for that same subject.
+    subject: str = ""
 
     @classmethod
-    def issue(cls, request_id: str, intent: Intent, now: datetime) -> "PendingConfirmation":
+    def issue(cls, request_id: str, intent: Intent, now: datetime, subject: str = "") -> "PendingConfirmation":
         return cls(
             request_id=request_id,
             intent_name=intent.name,
             entities=tuple(sorted(intent.entities.items())),
             issued_at=now,
+            subject=subject,
         )
 
     def is_expired(self, now: datetime) -> bool:
@@ -176,6 +222,8 @@ class PendingConfirmation:
             "entities": [list(pair) for pair in self.entities],
             "issuedAtUtc": self.issued_at.astimezone(timezone.utc).isoformat(),
         }
+        if self.subject:
+            payload["subject"] = self.subject
         raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
         body = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
         return f"{body}.{_sign(raw)}"
@@ -200,6 +248,7 @@ class PendingConfirmation:
                 entities=tuple((pair[0], pair[1]) for pair in decoded["entities"]),
                 issued_at=datetime.fromisoformat(decoded["issuedAtUtc"]),
                 nonce=str(decoded["nonce"]),
+                subject=str(decoded.get("subject", "")),
             )
         except (KeyError, TypeError, ValueError, IndexError) as exc:
             raise ConfirmationError("malformed confirmation token") from exc
@@ -210,6 +259,7 @@ class VoiceTurn:
     request_id: str
     transcript: str
     locale: str
+    subject: str = ""
 
     @classmethod
     def from_payload(cls, payload: object) -> "VoiceTurn":
@@ -226,7 +276,14 @@ class VoiceTurn:
             raise VoiceTurnValidationError(f"transcript must contain 1-{MAX_TRANSCRIPT_LENGTH} characters")
         if not isinstance(locale, str) or not 2 <= len(locale) <= 35:
             raise VoiceTurnValidationError("locale must contain 2-35 characters")
-        return cls(request_id=request_id, transcript=transcript.strip(), locale=locale)
+        subject = payload.get("subject", "")
+        if subject is None:
+            subject = ""
+        if not isinstance(subject, str) or (subject and not SUBJECT_PATTERN.fullmatch(subject)):
+            raise VoiceTurnValidationError("subject must contain 1-128 letters, digits or . _ @ : + -")
+        if not subject and require_subject_default():
+            raise VoiceTurnValidationError(f"subject is required ({REQUIRE_SUBJECT_ENV} is on)")
+        return cls(request_id=request_id, transcript=transcript.strip(), locale=locale, subject=subject)
 
 
 @dataclass(frozen=True)
@@ -386,7 +443,7 @@ def process_voice_turn(turn: VoiceTurn, *, now: datetime | None = None, stop_req
         speak=True,
         requires_confirmation=True,
         intent=intent,
-        pending_confirmation=PendingConfirmation.issue(turn.request_id, intent, now),
+        pending_confirmation=PendingConfirmation.issue(turn.request_id, intent, now, turn.subject),
         interpretation=interpretation,
     )
 
@@ -405,6 +462,11 @@ class ConfirmationResult:
     entities: dict[str, str] | None
     age_seconds: float | None
     reason: str
+    # Only on a confirmed result: who it was confirmed for, when, the one-use nonce of the token and, when a result key is
+    # configured, the signature the relaying server checks (see sign_result).
+    subject: str | None = None
+    confirmed_at: str | None = None
+    nonce: str | None = None
 
     def to_payload(self) -> dict[str, object]:
         payload: dict[str, object] = {"type": "confirmation_result", "status": self.status, "reason": self.reason}
@@ -414,10 +476,19 @@ class ConfirmationResult:
             payload["intent"] = {"name": self.intent_name, "entities": self.entities}
         if self.age_seconds is not None:
             payload["ageSeconds"] = self.age_seconds
+        if self.status == "confirmed":
+            payload["subject"] = self.subject or ""
+            if self.confirmed_at is not None:
+                payload["confirmedAtUtc"] = self.confirmed_at
+            if self.nonce is not None:
+                payload["nonce"] = self.nonce
+            key = result_key()
+            if key is not None:
+                payload["signature"] = sign_result(payload, key)
         return payload
 
 
-def confirm_pending_action(confirmation_token: object, *, now: datetime | None = None) -> ConfirmationResult:
+def confirm_pending_action(confirmation_token: object, *, subject: object = None, now: datetime | None = None) -> ConfirmationResult:
     """this project's own literal acceptance test: a repeated/replayed confirmation
     token past its own real validity window - or one that never named a
     real pending action at all - must never confirm anything. Only a
@@ -427,6 +498,9 @@ def confirm_pending_action(confirmation_token: object, *, now: datetime | None =
     (read back from the token itself, never re-guessed) - the real
     caller (SERVER/OPS-AGENT) still decides whether that matches what it
     is about to actually do.
+
+    A token issued for a subject confirms only for that same subject (`subject` is who the relaying server says is asking, never
+    something the client chose); a token that names nobody is confirmed as before unless HYDRA_UMC_VOICE_UI_REQUIRE_SUBJECT is on.
     """
     now = now if now is not None else datetime.now(timezone.utc)
     if not isinstance(confirmation_token, str) or not confirmation_token:
@@ -439,6 +513,23 @@ def confirm_pending_action(confirmation_token: object, *, now: datetime | None =
     except ConfirmationError as exc:
         return ConfirmationResult(
             status="invalid", request_id=None, intent_name=None, entities=None, age_seconds=None, reason=str(exc),
+        )
+    asking = subject if isinstance(subject, str) else ""
+    if asking and not SUBJECT_PATTERN.fullmatch(asking):
+        return ConfirmationResult(
+            status="invalid", request_id=None, intent_name=None, entities=None, age_seconds=None,
+            reason="subject must contain 1-128 letters, digits or . _ @ : + -",
+        )
+    if pending.subject and asking != pending.subject:
+        # not used up: the person it was issued for can still confirm it
+        return ConfirmationResult(
+            status="invalid", request_id=None, intent_name=None, entities=None, age_seconds=None,
+            reason="this confirmation was issued for someone else" if asking else "this confirmation belongs to a subject and none was named",
+        )
+    if not pending.subject and require_subject_default():
+        return ConfirmationResult(
+            status="invalid", request_id=None, intent_name=None, entities=None, age_seconds=None,
+            reason=f"this confirmation names nobody and {REQUIRE_SUBJECT_ENV} is on - repeat the request with a subject",
         )
     age = pending.age_seconds(now)
     if pending.is_expired(now):
@@ -462,4 +553,5 @@ def confirm_pending_action(confirmation_token: object, *, now: datetime | None =
         status="confirmed", request_id=pending.request_id, intent_name=pending.intent_name,
         entities=dict(pending.entities), age_seconds=age,
         reason=f"{pending.intent_name} confirmed {age:.1f}s after being requested - execution still requires the authenticated primary control",
+        subject=pending.subject, confirmed_at=now.astimezone(timezone.utc).isoformat(), nonce=pending.nonce,
     )

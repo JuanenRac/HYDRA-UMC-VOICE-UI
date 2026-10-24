@@ -121,7 +121,8 @@ class VoiceGatewayHandler(BaseHTTPRequestHandler):
             # whether a specific pending confirmation is still genuine
             # and within its own real validity window.
             token = payload.get("confirmationToken") if isinstance(payload, dict) else None
-            result = confirm_pending_action(token)
+            asking = payload.get("subject") if isinstance(payload, dict) else None
+            result = confirm_pending_action(token, subject=asking)
             self._write_json(HTTPStatus.OK, result.to_payload())
             return
 
