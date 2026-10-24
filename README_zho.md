@@ -24,9 +24,9 @@
 
 | | |
 |---|---|
-| 版本 | `0.1.7` |
+| 版本 | `0.1.8` |
 | 成熟度 | 可用 |
-| 测试 | 174 (`pytest tests/`) |
+| 测试 | 85 (`pytest tests/`) |
 | 技术栈 | Python / Rule-based intent parser / Energy-gate VAD |
 | 目标 | HYDRA-UMC 工作单元的 Raspberry Pi CM5 |
 | 真实硬件 | 尚未：此版本没有在真实硬件上运行的记录 |
@@ -141,7 +141,7 @@ run.bat
 `run.sh` 的预期输出：
 
 ```text
-HYDRA-UMC-VOICE-UI v0.1.7
+HYDRA-UMC-VOICE-UI v0.1.8
 Voice UI (Hailo-10) - local STT/TTS pipeline for hands-free robotic mission control.
 ```
 
