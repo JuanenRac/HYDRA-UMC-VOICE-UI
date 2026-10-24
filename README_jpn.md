@@ -105,11 +105,13 @@ flowchart LR
 ```text
 HYDRA-UMC-VOICE-UI/
 ├── src/hydra_umc_voice_ui/
+│   ├── __init__.py            # パッケージの説明とバージョン
 │   ├── audio.py               # 実際の WAV 読み込み + エネルギーによる音声活動検出
 │   ├── intent.py               # 実際のルールベース意図/エンティティパーサー + あいまいさを考慮した classify_intent()
 │   ├── gateway.py               # Watchの認知フローが共有する、範囲を限定したテキスト→意図ゲートウェイ
 │   ├── http_service.py          # Watch→認知の音声経路のための小さなstdlib HTTP境界
-│   └── main.py                  # エントリポイント + 実際の `analyze-audio`/`parse-intent` サブコマンド
+│   ├── main.py                  # エントリポイント + 実際の `analyze-audio`/`parse-intent` サブコマンド
+│   └── ratelimit.py             # クライアントアドレスごとのスライディングウィンドウ式リクエスト制限 (1つのクライアントが確認リストを埋め尽くせないように)
 ├── tests/                    # 実際のテスト：WAV フィクスチャ、VAD、意図ルール、gateway、エンドツーエンド CLI
 ├── docs/                     # ドキュメントとコマンドカタログ
 ├── images/                   # メディアと図表
@@ -119,7 +121,10 @@ HYDRA-UMC-VOICE-UI/
 │   └── hydra-umc-voice-ui.service # ローカルCM5音声HTTPサービスのsystemdユニット
 ├── tools/
 │   ├── build_test.py         # バージョンを増やさないビルドチェック
-│   └── ci_validate.py        # CI が使用するマニフェスト/CHANGELOG/ドキュメント検証
+│   ├── ci_validate.py        # CI が使用するマニフェスト/CHANGELOG/ドキュメント検証
+│   ├── _doc_policy.py        # ファミリー共通のドキュメント規則 (HYDRA-UMC-SDK のコピーで、同期を維持)
+│   ├── _readme_parity.py     # 8つの README が同じ構造であることの検査 (HYDRA-UMC-SDK のコピーで、同期を維持)
+│   └── hydra_project_tool.py # すべてのリポジトリで共通のコマンド: validate、test、ci、version、status、bump
 ├── build/                    # ローカルビルド出力（git 管理外）
 ├── Dockerfile                # 認証付き HTTP ゲートウェイ用の最小コンテナイメージ（非 root）
 ├── pyproject.toml            # パッケージメタデータ（オドメーター式バージョン増加）

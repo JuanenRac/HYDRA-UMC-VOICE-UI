@@ -162,11 +162,13 @@ ein:
 ```text
 HYDRA-UMC-VOICE-UI/
 ├── src/hydra_umc_voice_ui/
+│   ├── __init__.py            # Paketbeschreibung und Version
 │   ├── audio.py               # Echtes WAV-Laden + Sprachaktivitätserkennung per Energie
 │   ├── intent.py               # Echter regelbasierter Absicht-/Entitäten-Parser + ambiguitätsbewusstes classify_intent()
 │   ├── gateway.py               # Begrenztes Text-zu-Intent-Gateway, geteilt mit dem Watch-Cognitive-Flow
 │   ├── http_service.py          # Kleine stdlib-HTTP-Grenze für den Watch-zu-Cognitive-Sprachpfad
-│   └── main.py                  # Einstiegspunkt + echte Subcommands `analyze-audio`/`parse-intent`
+│   ├── main.py                  # Einstiegspunkt + echte Subcommands `analyze-audio`/`parse-intent`
+│   └── ratelimit.py             # Ein Gleitfenster-Limit für Anfragen je Client-Adresse (damit ein Client die Bestätigungsliste nicht füllen kann)
 ├── tests/                    # Echte Tests: WAV-Fixtures, VAD, Intent-Regeln, Gateway, End-to-End-CLI
 ├── docs/                     # Dokumentation und Befehlskatalog
 ├── images/                   # Medien und Diagramme
@@ -176,7 +178,10 @@ HYDRA-UMC-VOICE-UI/
 │   └── hydra-umc-voice-ui.service # systemd-Unit des lokalen CM5-Sprach-HTTP-Dienstes
 ├── tools/
 │   ├── build_test.py         # Nicht-versionierender Build-Check
-│   └── ci_validate.py        # Manifest/CHANGELOG/Docs-Validierung, von CI genutzt
+│   ├── ci_validate.py        # Manifest/CHANGELOG/Docs-Validierung, von CI genutzt
+│   ├── _doc_policy.py        # Von der Familie geteilte Dokumentationsregeln (Kopie der von HYDRA-UMC-SDK, synchron gehalten)
+│   ├── _readme_parity.py     # Prüfung, dass die acht READMEs dieselbe Struktur haben (Kopie der von HYDRA-UMC-SDK, synchron gehalten)
+│   └── hydra_project_tool.py # Dieselben Befehle in jedem Repository: validate, test, ci, version, status, bump
 ├── build/                    # Lokale Build-Ausgabe (von git ignoriert)
 ├── Dockerfile                # Minimales Container-Image für das authentifizierte HTTP-Gateway (non-root)
 ├── pyproject.toml            # Paket-Metadaten (Version per Kilometerzähler-Inkrement)

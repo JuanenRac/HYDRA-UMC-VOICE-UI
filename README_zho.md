@@ -103,11 +103,13 @@ flowchart LR
 ```text
 HYDRA-UMC-VOICE-UI/
 ├── src/hydra_umc_voice_ui/
+│   ├── __init__.py            # 包说明与版本
 │   ├── audio.py               # 真实的 WAV 加载 + 基于能量的语音活动检测
 │   ├── intent.py               # 真实的基于规则的意图/实体解析器 + 具备歧义感知能力的 classify_intent()
 │   ├── gateway.py               # 受限的文本到意图网关,由 Watch 认知流程共享
 │   ├── http_service.py          # 面向 Watch→认知语音路径的小型 stdlib HTTP 边界
-│   └── main.py                  # 入口点 + 真实的 `analyze-audio`/`parse-intent` 子命令
+│   ├── main.py                  # 入口点 + 真实的 `analyze-audio`/`parse-intent` 子命令
+│   └── ratelimit.py             # 按客户端地址的滑动窗口请求限制 (防止单个客户端填满确认列表)
 ├── tests/                    # 真实测试：WAV 夹具、VAD、意图规则、gateway、端到端 CLI
 ├── docs/                     # 文档与指令目录
 ├── images/                   # 媒体与图表
@@ -117,7 +119,10 @@ HYDRA-UMC-VOICE-UI/
 │   └── hydra-umc-voice-ui.service # 本地 CM5 语音 HTTP 服务的 systemd 单元
 ├── tools/
 │   ├── build_test.py         # 不递增版本号的构建检查
-│   └── ci_validate.py        # CI 使用的清单/CHANGELOG/文档校验
+│   ├── ci_validate.py        # CI 使用的清单/CHANGELOG/文档校验
+│   ├── _doc_policy.py        # 家族共享的文档规则 (HYDRA-UMC-SDK 的副本,保持同步)
+│   ├── _readme_parity.py     # 检查八个 README 结构一致 (HYDRA-UMC-SDK 的副本,保持同步)
+│   └── hydra_project_tool.py # 每个仓库相同的命令: validate、test、ci、version、status、bump
 ├── build/                    # 本地构建输出（已被 git 忽略）
 ├── Dockerfile                # 用于经认证 HTTP 网关的最小容器镜像（非 root）
 ├── pyproject.toml            # 包元数据（里程表式递增版本号）

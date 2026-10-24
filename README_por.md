@@ -102,11 +102,13 @@ Este repositório é um **filho** da família Cognitive AI Node - o seu pai, o [
 ```text
 HYDRA-UMC-VOICE-UI/
 ├── src/hydra_umc_voice_ui/
+│   ├── __init__.py            # Descrição e versão do pacote
 │   ├── audio.py               # Carregamento real de WAV + deteção de atividade de voz por limiar de energia
 │   ├── intent.py               # Analisador real de intenções/entidades por regras + classify_intent() sensível a ambiguidades
 │   ├── gateway.py               # Gateway limitado de texto para intenção partilhado pelo fluxo cognitivo do Watch
 │   ├── http_service.py          # Pequena fronteira HTTP da biblioteca padrão para o caminho de voz do Watch ao nó cognitivo
-│   └── main.py                  # Ponto de entrada + subcomandos reais `analyze-audio`/`parse-intent`
+│   ├── main.py                  # Ponto de entrada + subcomandos reais `analyze-audio`/`parse-intent`
+│   └── ratelimit.py             # Um limite de pedidos por endereço de cliente em janela deslizante (para que um cliente não encha a lista de confirmações)
 ├── tests/                    # Testes reais: fixtures WAV, VAD, regras de intenção, gateway, CLI de ponta a ponta
 ├── docs/                     # Documentação e catálogo de comandos
 ├── images/                   # Multimédia e diagramas
@@ -116,7 +118,10 @@ HYDRA-UMC-VOICE-UI/
 │   └── hydra-umc-voice-ui.service # Unidade systemd do serviço HTTP de voz local da CM5
 ├── tools/
 │   ├── build_test.py         # Verificação de compilação sem alterar versões
-│   └── ci_validate.py        # Validação de manifesto/CHANGELOG/docs usada pelo CI
+│   ├── ci_validate.py        # Validação de manifesto/CHANGELOG/docs usada pelo CI
+│   ├── _doc_policy.py        # Regras de documentação partilhadas pela família (cópia da de HYDRA-UMC-SDK, mantida em sincronia)
+│   ├── _readme_parity.py     # Verificação de que os oito README partilham a mesma estrutura (cópia da de HYDRA-UMC-SDK, mantida em sincronia)
+│   └── hydra_project_tool.py # Os mesmos comandos em todos os repositórios: validate, test, ci, version, status, bump
 ├── build/                    # Saída de compilação local (ignorada pelo git)
 ├── Dockerfile                # Imagem de contentor mínima para o gateway HTTP autenticado (não root)
 ├── pyproject.toml            # Metadados do pacote (versão subida só pelo comando bump explícito)

@@ -160,11 +160,13 @@ hermanos (VLA-Engine, Semantic-Planner, Docs-QA):
 ```text
 HYDRA-UMC-VOICE-UI/
 ├── src/hydra_umc_voice_ui/
+│   ├── __init__.py            # Descripción y versión del paquete
 │   ├── audio.py               # Carga real de WAV + deteccion de actividad de voz por energia
 │   ├── intent.py               # Parser real de intencion/entidades basado en reglas + classify_intent() consciente de ambigüedad
 │   ├── gateway.py               # Puerta de enlace texto-a-intención acotada, compartida por el flujo cognitivo de Watch
 │   ├── http_service.py          # Pequeño límite HTTP de stdlib para la ruta de voz Watch-a-cognitivo
-│   └── main.py                  # Punto de entrada + subcomandos reales `analyze-audio`/`parse-intent`
+│   ├── main.py                  # Punto de entrada + subcomandos reales `analyze-audio`/`parse-intent`
+│   └── ratelimit.py             # Un límite de peticiones por dirección de cliente en ventana deslizante (para que un cliente no llene la lista de confirmaciones)
 ├── tests/                    # Tests reales: fixtures WAV, VAD, reglas de intencion, gateway, CLI end-to-end
 ├── docs/                     # Documentación y catálogo de comandos
 ├── images/                   # Medios y diagramas
@@ -174,7 +176,10 @@ HYDRA-UMC-VOICE-UI/
 │   └── hydra-umc-voice-ui.service # Unidad systemd del servicio HTTP de voz local en la CM5
 ├── tools/
 │   ├── build_test.py         # Comprobación de compilación sin versionado
-│   └── ci_validate.py        # Validación de manifiesto/CHANGELOG/docs usada por CI
+│   ├── ci_validate.py        # Validación de manifiesto/CHANGELOG/docs usada por CI
+│   ├── _doc_policy.py        # Reglas de documentación compartidas por la familia (copia de la de HYDRA-UMC-SDK, mantenida en sincronía)
+│   ├── _readme_parity.py     # Comprobación de que los ocho README comparten estructura (copia de la de HYDRA-UMC-SDK, mantenida en sincronía)
+│   └── hydra_project_tool.py # Los mismos comandos en todos los repositorios: validate, test, ci, version, status, bump
 ├── build/                    # Salida de build local (ignorada por git)
 ├── Dockerfile                # Imagen de contenedor mínima para el gateway HTTP autenticado (sin root)
 ├── pyproject.toml            # Metadatos del paquete (versión con incremento cuentakilómetros)

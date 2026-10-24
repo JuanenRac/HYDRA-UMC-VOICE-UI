@@ -153,11 +153,13 @@ service into `docker-compose.yml` alongside its three siblings
 ```text
 HYDRA-UMC-VOICE-UI/
 ├── src/hydra_umc_voice_ui/
+│   ├── __init__.py            # Package description and version
 │   ├── audio.py               # Real WAV loading + energy-gate voice-activity detection
 │   ├── intent.py               # Real rule-based intent/entity parser + ambiguity-aware classify_intent()
 │   ├── gateway.py               # Bounded text-to-intent gateway shared by the Watch cognitive flow
 │   ├── http_service.py          # Small stdlib HTTP boundary for the Watch-to-cognitive voice path
-│   └── main.py                  # Entry point + real `analyze-audio`/`parse-intent` subcommands
+│   ├── main.py                  # Entry point + real `analyze-audio`/`parse-intent` subcommands
+│   └── ratelimit.py             # A sliding-window limit of requests per client address (so one client cannot fill the confirmation list)
 ├── tests/                    # Real tests: WAV fixtures, VAD, intent rules, gateway, end-to-end CLI
 ├── docs/                     # Documentation and command catalog
 ├── images/                   # Media and diagrams
@@ -167,7 +169,10 @@ HYDRA-UMC-VOICE-UI/
 │   └── hydra-umc-voice-ui.service # Local CM5 voice HTTP service systemd unit
 ├── tools/
 │   ├── build_test.py         # Non-versioning build/compile check
-│   └── ci_validate.py        # Manifest/CHANGELOG/docs validation used by CI
+│   ├── ci_validate.py        # Manifest/CHANGELOG/docs validation used by CI
+│   ├── _doc_policy.py        # Documentation rules shared by the family (a copy of HYDRA-UMC-SDK's, kept in sync)
+│   ├── _readme_parity.py     # Check that the eight READMEs share one structure (a copy of HYDRA-UMC-SDK's, kept in sync)
+│   └── hydra_project_tool.py # The same commands in every repository: validate, test, ci, version, status, bump
 ├── build/                    # Local build output (git-ignored)
 ├── Dockerfile                # Minimal container image for the authenticated HTTP gateway (non-root)
 ├── pyproject.toml            # Package metadata (version raised only by the explicit bump command)
