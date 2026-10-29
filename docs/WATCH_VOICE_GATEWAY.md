@@ -137,3 +137,14 @@ The rules understand English only. The `locale` of a turn must be 2-35 character
 ## Confidence of the recognizer
 
 A turn may carry `"confidence"`, a number from 0 to 1 that says how sure the speech recognizer was of the transcript (a number outside that range, or anything that is not a number, is refused with a 400). A request that starts a movement (a mission or going home) heard with a confidence below the server's minimum is not accepted: the reply asks to say it again, has no intent and no confirmation token, and says that nothing was started. A stop and a status request are never held back by it, and a turn without `confidence` behaves as before. The minimum is `HYDRA_UMC_VOICE_UI_MIN_CONFIDENCE` (default 0.6; 0 switches the check off; a value that is not a number from 0 to 1 is ignored and the default stays).
+
+## Options sent by the Server
+
+Both settings above can also be set by an administrator from the Server Admin screen of the control app. The Server saves them in its configuration and sends them with every turn it relays, as an object `options` in the body of `POST /v1/voice/turn`:
+
+```json
+{ "type": "voice_turn", "requestId": "r-1", "transcript": "start mission demo", "locale": "en-US",
+  "options": { "includeHeardText": false, "minConfidence": 0.6 } }
+```
+
+Both fields are optional. `includeHeardText` must be true or false and `minConfidence` a number from 0 to 1; anything else (or an `options` that is not an object) is refused with a 400 and a message that names the field. The order is always the same: the environment of this service (`HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT`, `HYDRA_UMC_VOICE_UI_MIN_CONFIDENCE`) wins when it is set, then the `options` of the turn, then the built-in default (transcript off, 0.6), which is what a turn without `options` gets. The Server replaces any `options` a client sends with its own, so a phone cannot change them. The options are read from the body of the request, so the service token (`HYDRA_UMC_VOICE_UI_TOKEN`) is what keeps other callers from setting them; on a loopback bind without a token any local process can.

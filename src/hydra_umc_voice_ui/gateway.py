@@ -296,6 +296,10 @@ class VoiceTurn:
     subject: str = ""
     # how sure the speech recognizer was of the transcript, from 0 to 1; None when the client does not say
     confidence: float | None = None
+    # what the Server asked of this turn (its `options`, set by an administrator); None: the Server said nothing, so the
+    # environment of this service, then the built-in default, decide. The environment of this service always wins.
+    include_heard_text: bool | None = None
+    min_confidence: float | None = None
 
     @classmethod
     def from_payload(cls, payload: object) -> "VoiceTurn":
@@ -324,12 +328,30 @@ class VoiceTurn:
             isinstance(confidence, bool) or not isinstance(confidence, (int, float)) or not 0.0 <= confidence <= 1.0
         ):
             raise VoiceTurnValidationError("confidence must be a number from 0 to 1")
+        include_heard_text: bool | None = None
+        min_confidence: float | None = None
+        options = payload.get("options")
+        if options is not None:
+            if not isinstance(options, dict):
+                raise VoiceTurnValidationError("options must be an object")
+            heard = options.get("includeHeardText")
+            if heard is not None:
+                if not isinstance(heard, bool):
+                    raise VoiceTurnValidationError("options.includeHeardText must be true or false")
+                include_heard_text = heard
+            wanted = options.get("minConfidence")
+            if wanted is not None:
+                if isinstance(wanted, bool) or not isinstance(wanted, (int, float)) or not 0.0 <= wanted <= 1.0:
+                    raise VoiceTurnValidationError("options.minConfidence must be a number from 0 to 1")
+                min_confidence = float(wanted)
         return cls(
             request_id=request_id,
             transcript=transcript.strip(),
             locale=locale,
             subject=subject,
             confidence=None if confidence is None else float(confidence),
+            include_heard_text=include_heard_text,
+            min_confidence=min_confidence,
         )
 
 
@@ -414,18 +436,27 @@ def process_voice_turn(
     says otherwise: only starting a movement has to be confirmed.
 
     The interpretation carries the transcript (`heardText`, `normalizedText`) only when `include_heard_text`
-    (default: the HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT server setting, off) says so.
+    (default: the HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT setting of this service; when it is not set, the `options` the
+    Server sent with the turn; else off) says so.
 
     A request that starts a movement is not accepted when the turn says how sure the recognizer was (`confidence`)
-    and that is below `min_confidence` (default: the HYDRA_UMC_VOICE_UI_MIN_CONFIDENCE server setting, 0.6); a stop and
+    and that is below `min_confidence` (default: the HYDRA_UMC_VOICE_UI_MIN_CONFIDENCE setting of this service, else the Server's `options`, else 0.6); a stop and
     a status request are never held back by it.
     """
     if stop_requires_confirmation is None:
         stop_requires_confirmation = stop_requires_confirmation_default()
+    # order: the argument, the environment of this service (it wins over the Server), what the Server asked of this turn,
+    # the built-in default
     if include_heard_text is None:
-        include_heard_text = include_heard_text_default()
+        if os.environ.get(HEARD_TEXT_ENV, "").strip() == "" and turn.include_heard_text is not None:
+            include_heard_text = turn.include_heard_text
+        else:
+            include_heard_text = include_heard_text_default()
     if min_confidence is None:
-        min_confidence = min_confidence_default()
+        if os.environ.get(MIN_CONFIDENCE_ENV, "").strip() == "" and turn.min_confidence is not None:
+            min_confidence = turn.min_confidence
+        else:
+            min_confidence = min_confidence_default()
     now = now if now is not None else datetime.now(timezone.utc)
     classification = classify_intent(turn.transcript)
     interpretation: dict[str, object] = {}

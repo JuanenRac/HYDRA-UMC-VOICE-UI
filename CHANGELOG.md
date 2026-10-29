@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The Server can set the transcript and the minimum confidence for each turn.** A turn may carry `options` (`includeHeardText`, `minConfidence`), which the Server fills from what an administrator saved in Server Admin; the environment of this service still wins, a turn without `options` behaves as before, and a bad value is refused with a 400. Documented in `docs/WATCH_VOICE_GATEWAY.md`. 14 new tests.
 - **The layout of the README is checked in the CI:** the validator runs `tools/universal_readme_check.py` and lists, as a warning, what differs from the universal layout of the README.
 - **A movement heard with low confidence is not accepted.** A turn may carry `confidence` (0 to 1, from the speech recognizer); a request to start a mission or go home below `HYDRA_UMC_VOICE_UI_MIN_CONFIDENCE` (default 0.6, 0 switches it off) is answered with a request to repeat it, with no intent and no confirmation token. A stop and a status request are never held back. Documented in `docs/WATCH_VOICE_GATEWAY.md`. 5 new tests.
 - **A voice gate relative to the noise.** `analyze-audio --noise-ratio R` (and `detect_voice_segments(noise_ratio=R)`) uses R times the background noise of the clip as the gate instead of the fixed 500, so a recording with a constant hum is not read as speech; `--threshold` sets the fixed gate. 5 new tests.
