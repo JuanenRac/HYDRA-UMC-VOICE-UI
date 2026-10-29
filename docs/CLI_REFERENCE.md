@@ -48,7 +48,7 @@ Voice UI (Hailo-10) - local STT/TTS pipeline for hands-free robotic mission cont
 ```
 $ hydra-umc-voice-ui analyze-audio -h
 usage: hydra-umc-voice-ui analyze-audio [-h] [--threshold THRESHOLD |
-                                        --noise-ratio NOISE_RATIO]
+                                        --noise-ratio NOISE_RATIO] [--stream]
                                         wav_file
 
 positional arguments:
@@ -63,6 +63,10 @@ options:
                         Gate relative to the background noise of the clip: a
                         frame is voice when its energy is this many times the
                         noise floor.
+  --stream              Read the file block by block (memory stays one block);
+                        with --noise-ratio the noise floor is a running
+                        estimate, so the segments can differ slightly from the
+                        whole-clip result.
 ```
 
 `--threshold` is a fixed gate (default 500). `--noise-ratio R` sets the gate to
@@ -70,6 +74,16 @@ R times the background noise of the clip (the energy that only the quietest
 tenth of its frames fall below, never less than 1), so a recording with a
 constant hum is not read as speech from start to end. The two options cannot
 be combined.
+
+`--stream` reads the file block by block (4096 frames) through `StreamingVad`
+instead of loading all of it: the memory used is one block, whatever the length
+of the recording, and the report is the same as without it (with a fixed gate the
+segments are exactly the same, whatever the block size). With `--noise-ratio` the
+noise floor is a running estimate (it follows a quieter frame down at once and a
+louder one up slowly), so the segments can differ slightly from the whole-clip
+estimate. `StreamingVad.feed()` takes any number of samples and returns the
+segments that ended inside them, which is what a live microphone front end will
+need; the 16 MiB and 300 s limits still apply to a file.
 
 For the current in-memory v0 front-end, `analyze-audio` accepts only 16-bit
 PCM WAV input up to **16 MiB decoded PCM** and **300 seconds**. The input is

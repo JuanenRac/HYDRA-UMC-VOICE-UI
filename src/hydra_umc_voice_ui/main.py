@@ -21,7 +21,7 @@ import wave
 from pathlib import Path
 
 from . import __version__
-from .audio import detect_voice_segments, load_wav, rms_energy
+from .audio import StreamingVad, detect_voice_segments, iter_wav_blocks, load_wav, rms_energy
 from .http_service import create_voice_gateway
 from .intent import classify_intent
 
@@ -37,10 +37,46 @@ def _print_identity() -> None:
     print(ROLE)
 
 
-def _run_analyze_audio(path: Path, threshold: float = 500.0, noise_ratio: float | None = None) -> int:
+def _run_analyze_audio_stream(path: Path, threshold: float, noise_ratio: float | None) -> int:
+    """The same report read block by block, so the memory used is one block, not the whole recording."""
+    vad: StreamingVad | None = None
+    segments = []
+    total_squares = 0
+    total_samples = 0
+    try:
+        for sample_rate, channels, samples in iter_wav_blocks(path):
+            if vad is None:
+                vad = StreamingVad(sample_rate, channels, threshold=threshold, noise_ratio=noise_ratio)
+            segments.extend(vad.feed(samples))
+            total_squares += sum(sample * sample for sample in samples)
+            total_samples += len(samples)
+        if vad is not None:
+            segments.extend(vad.finish())
+        with wave.open(str(path), "rb") as header:
+            sample_rate, channels, frames = header.getframerate(), header.getnchannels(), header.getnframes()
+    except (wave.Error, EOFError, ValueError) as error:
+        print(f"ERROR: not a valid PCM WAV file: {path} ({error})")
+        return 1
+    print(f"File: {path.name}")
+    print(f"Sample rate: {sample_rate} Hz")
+    print(f"Channels: {channels}")
+    print(f"Duration: {frames / sample_rate:.3f} s")
+    print(f"RMS energy: {(total_squares / total_samples) ** 0.5 if total_samples else 0.0:.1f}")
+    if not segments:
+        print("Voice segments: none detected (v0 energy-gate VAD)")
+        return 0
+    print(f"Voice segments: {len(segments)} detected (v0 energy-gate VAD)")
+    for index, segment in enumerate(segments, start=1):
+        print(f"  {index}. {segment.start_seconds:.3f}s -> {segment.end_seconds:.3f}s")
+    return 0
+
+
+def _run_analyze_audio(path: Path, threshold: float = 500.0, noise_ratio: float | None = None, stream: bool = False) -> int:
     if not path.is_file():
         print(f"ERROR: file not found: {path}")
         return 1
+    if stream:
+        return _run_analyze_audio_stream(path, threshold, noise_ratio)
 
     try:
         clip = load_wav(path)
@@ -135,6 +171,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Gate relative to the background noise of the clip: a frame is voice when its energy is this many times the noise floor.",
     )
 
+    audio_parser.add_argument(
+        "--stream",
+        action="store_true",
+        help="Read the file block by block (memory stays one block); with --noise-ratio the noise floor is a running estimate, so the segments can differ slightly from the whole-clip result.",
+    )
+
     intent_parser = subparsers.add_parser(
         "parse-intent", help="Real rule-based intent/entity parsing over transcribed text."
     )
@@ -160,7 +202,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "analyze-audio":
-        return _run_analyze_audio(args.wav_file, args.threshold, args.noise_ratio)
+        return _run_analyze_audio(args.wav_file, args.threshold, args.noise_ratio, args.stream)
     if args.command == "parse-intent":
         return _run_parse_intent(args.text)
     if args.command == "serve":

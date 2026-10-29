@@ -145,3 +145,31 @@ def test_analyze_audio_accepts_a_noise_relative_gate_and_refuses_both_gates(tmp_
         main(["analyze-audio", str(wav_path), "--threshold", "900", "--noise-ratio", "3"])
     with pytest.raises(SystemExit):
         main(["analyze-audio", str(wav_path), "--noise-ratio", "0"])
+
+
+def test_analyze_audio_stream_prints_the_same_report_as_the_whole_clip(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    import math
+
+    wav_path = tmp_path / "speech.wav"
+    samples = [0] * 3000 + [int(9000 * math.sin(2 * math.pi * 440 * i / SAMPLE_RATE)) for i in range(2000)] + [0] * 1500
+    with wave.open(str(wav_path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(SAMPLE_RATE)
+        wav_file.writeframes(array("h", samples).tobytes())
+
+    assert main(["analyze-audio", str(wav_path)]) == 0
+    whole = capsys.readouterr().out
+    assert main(["analyze-audio", str(wav_path), "--stream"]) == 0
+    streamed = capsys.readouterr().out
+    assert streamed == whole
+    assert "Voice segments: 1 detected" in streamed
+
+
+def test_analyze_audio_stream_reports_a_missing_or_corrupt_file_cleanly(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["analyze-audio", str(tmp_path / "missing.wav"), "--stream"]) == 1
+    assert "file not found" in capsys.readouterr().out
+    corrupt = tmp_path / "corrupt.wav"
+    corrupt.write_text("not a wav\n")
+    assert main(["analyze-audio", str(corrupt), "--stream"]) == 1
+    assert "not a valid PCM WAV file" in capsys.readouterr().out

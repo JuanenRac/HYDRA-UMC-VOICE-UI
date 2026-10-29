@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **Voice activity detection can run block by block:** `StreamingVad` takes samples of any block size and gives back each voice segment as soon as it ends (the same segments as the whole-clip detector for a fixed gate, tested with block sizes from one sample to the whole clip, mono and stereo); `analyze-audio --stream` reads a file one block at a time so its memory does not grow with the recording. With a noise-relative gate the floor is a running estimate. Tested; not run on a live microphone.
 - **README in the universal layout:** the README and its seven translations follow the layout that the four families share (22 sections in a fixed order), with an architecture picture and a repository-structure picture drawn from `docs/architecture.json` and `docs/structure.json`; the CI validator checks both pictures and the file tree.
 
 - **The Server can set the transcript and the minimum confidence for each turn.** A turn may carry `options` (`includeHeardText`, `minConfidence`), which the Server fills from what an administrator saved in Server Admin; the environment of this service still wins, a turn without `options` behaves as before, and a bad value is refused with a 400. Documented in `docs/WATCH_VOICE_GATEWAY.md`. 14 new tests.
