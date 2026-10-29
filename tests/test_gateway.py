@@ -417,3 +417,42 @@ def test_a_negated_request_is_answered_without_a_confirmation_token() -> None:
     assert reply.requires_confirmation is False
     assert reply.pending_confirmation is None
     assert "negation" in reply.text
+
+
+def test_a_movement_request_heard_with_low_confidence_is_not_accepted() -> None:
+    turn = VoiceTurn(request_id="r2", transcript="start mission alpha", locale="en-US", confidence=0.3)
+    reply = process_voice_turn(turn, min_confidence=0.6)
+    assert reply.intent is None and not reply.requires_confirmation and reply.pending_confirmation is None
+    assert "nothing was started" in reply.text
+    sure = VoiceTurn(request_id="r3", transcript="start mission alpha", locale="en-US", confidence=0.9)
+    assert process_voice_turn(sure, min_confidence=0.6).requires_confirmation
+
+
+def test_a_stop_and_a_status_request_are_never_held_back_by_low_confidence() -> None:
+    for text, name in (("stop", "stop"), ("what is the status", "status")):
+        reply = process_voice_turn(VoiceTurn(request_id="r4", transcript=text, locale="en-US", confidence=0.05), min_confidence=0.9)
+        assert reply.intent is not None and reply.intent.name == name
+
+
+def test_a_turn_without_confidence_behaves_as_before() -> None:
+    reply = process_voice_turn(VoiceTurn(request_id="r5", transcript="go home", locale="en-US"), min_confidence=0.99)
+    assert reply.requires_confirmation
+
+
+def test_the_confidence_of_a_turn_must_be_a_number_from_zero_to_one() -> None:
+    base = {"requestId": "r6", "transcript": "go home", "locale": "en-US"}
+    assert VoiceTurn.from_payload({**base, "confidence": 0.5}).confidence == 0.5
+    assert VoiceTurn.from_payload(base).confidence is None
+    for bad in (1.5, -0.1, "high", True, [0.5]):
+        with pytest.raises(VoiceTurnValidationError):
+            VoiceTurn.from_payload({**base, "confidence": bad})
+
+
+def test_the_minimum_confidence_setting_ignores_what_is_not_a_number_from_zero_to_one() -> None:
+    from hydra_umc_voice_ui.gateway import min_confidence_default
+
+    assert min_confidence_default({}) == 0.6
+    assert min_confidence_default({"HYDRA_UMC_VOICE_UI_MIN_CONFIDENCE": "0.8"}) == 0.8
+    assert min_confidence_default({"HYDRA_UMC_VOICE_UI_MIN_CONFIDENCE": "0"}) == 0.0
+    for bad in ("high", "1.5", "-1", "nan"):
+        assert min_confidence_default({"HYDRA_UMC_VOICE_UI_MIN_CONFIDENCE": bad}) == 0.6

@@ -133,3 +133,7 @@ A reply's `interpretation` holds `matchedRules` and, only when the server sets `
 ## Limits
 
 The rules understand English only. The `locale` of a turn must be 2-35 characters long but is not used to choose rules.
+
+## Confidence of the recognizer
+
+A turn may carry `"confidence"`, a number from 0 to 1 that says how sure the speech recognizer was of the transcript (a number outside that range, or anything that is not a number, is refused with a 400). A request that starts a movement (a mission or going home) heard with a confidence below the server's minimum is not accepted: the reply asks to say it again, has no intent and no confirmation token, and says that nothing was started. A stop and a status request are never held back by it, and a turn without `confidence` behaves as before. The minimum is `HYDRA_UMC_VOICE_UI_MIN_CONFIDENCE` (default 0.6; 0 switches the check off; a value that is not a number from 0 to 1 is ignored and the default stays).

@@ -75,6 +75,27 @@ def stop_requires_confirmation_default(environ: dict[str, str] | None = None) ->
     return env.get(STOP_CONFIRMATION_ENV, "").strip() == "1"
 
 
+MIN_CONFIDENCE_ENV = "HYDRA_UMC_VOICE_UI_MIN_CONFIDENCE"
+DEFAULT_MIN_CONFIDENCE = 0.6
+
+
+def min_confidence_default(environ: dict[str, str] | None = None) -> float:
+    """How sure the speech recognizer must be before a request that starts a movement is accepted (server setting).
+
+    Only a turn that carries a `confidence` is checked, and a stop is never held back by it. The value is a number from
+    0 to 1; 0 switches the check off. A value that is not a number from 0 to 1 is ignored and the default (0.6) stays,
+    so a typing mistake never silently opens the check."""
+    env = os.environ if environ is None else environ
+    raw = env.get(MIN_CONFIDENCE_ENV, "").strip()
+    if not raw:
+        return DEFAULT_MIN_CONFIDENCE
+    try:
+        value = float(raw)
+    except ValueError:
+        return DEFAULT_MIN_CONFIDENCE
+    return value if 0.0 <= value <= 1.0 else DEFAULT_MIN_CONFIDENCE
+
+
 HEARD_TEXT_ENV = "HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT"
 
 
@@ -273,6 +294,8 @@ class VoiceTurn:
     transcript: str
     locale: str
     subject: str = ""
+    # how sure the speech recognizer was of the transcript, from 0 to 1; None when the client does not say
+    confidence: float | None = None
 
     @classmethod
     def from_payload(cls, payload: object) -> "VoiceTurn":
@@ -296,7 +319,18 @@ class VoiceTurn:
             raise VoiceTurnValidationError("subject must contain 1-128 letters, digits or . _ @ : + -")
         if not subject and require_subject_default():
             raise VoiceTurnValidationError(f"subject is required ({REQUIRE_SUBJECT_ENV} is on)")
-        return cls(request_id=request_id, transcript=transcript.strip(), locale=locale, subject=subject)
+        confidence = payload.get("confidence")
+        if confidence is not None and (
+            isinstance(confidence, bool) or not isinstance(confidence, (int, float)) or not 0.0 <= confidence <= 1.0
+        ):
+            raise VoiceTurnValidationError("confidence must be a number from 0 to 1")
+        return cls(
+            request_id=request_id,
+            transcript=transcript.strip(),
+            locale=locale,
+            subject=subject,
+            confidence=None if confidence is None else float(confidence),
+        )
 
 
 @dataclass(frozen=True)
@@ -361,6 +395,7 @@ def process_voice_turn(
     now: datetime | None = None,
     stop_requires_confirmation: bool | None = None,
     include_heard_text: bool | None = None,
+    min_confidence: float | None = None,
 ) -> AssistantReply:
     """Parse one Watch request and return an honest, non-actuating reply.
 
@@ -380,11 +415,17 @@ def process_voice_turn(
 
     The interpretation carries the transcript (`heardText`, `normalizedText`) only when `include_heard_text`
     (default: the HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT server setting, off) says so.
+
+    A request that starts a movement is not accepted when the turn says how sure the recognizer was (`confidence`)
+    and that is below `min_confidence` (default: the HYDRA_UMC_VOICE_UI_MIN_CONFIDENCE server setting, 0.6); a stop and
+    a status request are never held back by it.
     """
     if stop_requires_confirmation is None:
         stop_requires_confirmation = stop_requires_confirmation_default()
     if include_heard_text is None:
         include_heard_text = include_heard_text_default()
+    if min_confidence is None:
+        min_confidence = min_confidence_default()
     now = now if now is not None else datetime.now(timezone.utc)
     classification = classify_intent(turn.transcript)
     interpretation: dict[str, object] = {}
@@ -435,6 +476,17 @@ def process_voice_turn(
             speak=True,
             requires_confirmation=False,
             intent=intent,
+            interpretation=interpretation,
+        )
+
+    if intent.name in (INTENT_START_MISSION, INTENT_GO_HOME) and turn.confidence is not None and turn.confidence < min_confidence:
+        return AssistantReply(
+            request_id=turn.request_id,
+            text="I am not sure I heard that correctly, so nothing was started. Please say it again.",
+            level="ATTENTION",
+            speak=True,
+            requires_confirmation=False,
+            intent=None,
             interpretation=interpretation,
         )
 

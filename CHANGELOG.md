@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A movement heard with low confidence is not accepted.** A turn may carry `confidence` (0 to 1, from the speech recognizer); a request to start a mission or go home below `HYDRA_UMC_VOICE_UI_MIN_CONFIDENCE` (default 0.6, 0 switches it off) is answered with a request to repeat it, with no intent and no confirmation token. A stop and a status request are never held back. Documented in `docs/WATCH_VOICE_GATEWAY.md`. 5 new tests.
 - **A voice gate relative to the noise.** `analyze-audio --noise-ratio R` (and `detect_voice_segments(noise_ratio=R)`) uses R times the background noise of the clip as the gate instead of the fixed 500, so a recording with a constant hum is not read as speech; `--threshold` sets the fixed gate. 5 new tests.
 - **The reply no longer repeats what was said.** The interpretation of a reply lists only the rules that matched; the transcript (`heardText`, `normalizedText`) is added only when the server sets `HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT=1`, because what a person said is personal data. The README in the eight languages and `SECURITY.md` say so, and the README states that the rules understand English only and that the `locale` of a turn is checked but not used. 3 new tests.
 
