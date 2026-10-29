@@ -61,6 +61,7 @@ Hailo-10 NPU 加速的高性能 STT（语音转文本）和 TTS（文本转语�
 * 🔏 **带签名且一次性的确认（v0）：** 用于确认停止、开始任务或返航的 `confirmationToken` 由服务器密钥（`HYDRA_UMC_VOICE_UI_CONFIRM_SECRET`，至少 16 个字符；未设置时每个进程生成一个随机密钥）通过 HMAC-SHA256 签名，带有随机 nonce，且只被接受一次：同一令牌的第二次使用、手工拼出的其他意图的令牌，或用另一把密钥签名的令牌，都会被作为 `invalid` 拒绝。此前令牌只是其自身内容的 SHA-256 前缀、没有任何密钥，所以任何知道格式的人都能构造出有效确认，而有效确认可在 30 秒内被重放。OS 安装程序会与其他设备密钥一起生成该密钥。*（已实现）*
 * 🛑 **语音停止指令从不被拖延（服务器设置）：** 默认情况下，停止请求会立即得到答复，不带确认令牌，并带有 `priority: safety-stop`，以便使用方把它转换为受控停止（它永远不能取代物理急停）；开始运动仍需确认。`HYDRA_UMC_VOICE_UI_STOP_REQUIRES_CONFIRMATION=1` 可恢复对停止的确认。*(已实现)*
 * 🔏 **确认只对提出请求的人有效，已确认的结果可以验证：** 一个回合可以指明它的 `subject`（HYDRA-UMC-SERVER 代为转发时所用的已登录用户）；带签名的确认令牌携带该值，并且只对同一主体确认（被拒绝不会消耗令牌）。已确认的结果还包含 `subject`、`confirmedAtUtc` 和一次性 `nonce`；如果设置了 `HYDRA_UMC_VOICE_UI_RESULT_KEY`（16 个字符或更长，与 HYDRA-UMC-SERVER 持有的值相同），还会带有 HMAC-SHA256 `signature`，服务器先验证它才会相信该结果。`HYDRA_UMC_VOICE_UI_REQUIRE_SUBJECT=1` 还会拒绝不指明任何人的回合或确认（默认关闭）。*（已实现）*
+* 🙈 **回复不会重复所说的内容（服务器设置）：** 默认情况下，回复的解释只列出匹配的规则；设置 `HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT=1` 会加入转写文本（`heardText`、`normalizedText`），它属于个人数据。限制：规则只理解英语，轮次中的 `locale` 会被校验但不会被使用。
 * 🛡️ **噪声消除：** 针对高环境噪声的工业环境进行优化。*（计划中）*
 * 👨‍👩‍👧 **认知 AI 节点子项目：** 作为
   [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE) 下 4 个同级服务之一运行（与 VLA-Engine、Semantic-Planner 和 Docs-QA 并列），共享父项目的 HydraOS 镜像和模型权重，而非各自保留独立副本。

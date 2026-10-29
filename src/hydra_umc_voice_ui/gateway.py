@@ -75,6 +75,19 @@ def stop_requires_confirmation_default(environ: dict[str, str] | None = None) ->
     return env.get(STOP_CONFIRMATION_ENV, "").strip() == "1"
 
 
+HEARD_TEXT_ENV = "HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT"
+
+
+def include_heard_text_default(environ: dict[str, str] | None = None) -> bool:
+    """Does a reply carry the transcript it was made from (server setting; off unless the variable is exactly "1")?
+
+    What a person said is personal data, and a reply travels through proxies and phone logs that have no need of it. By default
+    the interpretation of a reply lists only the rules that matched; a deployment that wants the transcript in the reply (to show
+    "I heard ...") can switch it on."""
+    env = os.environ if environ is None else environ
+    return env.get(HEARD_TEXT_ENV, "").strip() == "1"
+
+
 SUBJECT_PATTERN = re.compile(r"^[A-Za-z0-9_.@:+-]{1,128}$")
 REQUIRE_SUBJECT_ENV = "HYDRA_UMC_VOICE_UI_REQUIRE_SUBJECT"
 RESULT_KEY_ENV = "HYDRA_UMC_VOICE_UI_RESULT_KEY"
@@ -342,7 +355,13 @@ class AssistantReply:
         return payload
 
 
-def process_voice_turn(turn: VoiceTurn, *, now: datetime | None = None, stop_requires_confirmation: bool | None = None) -> AssistantReply:
+def process_voice_turn(
+    turn: VoiceTurn,
+    *,
+    now: datetime | None = None,
+    stop_requires_confirmation: bool | None = None,
+    include_heard_text: bool | None = None,
+) -> AssistantReply:
     """Parse one Watch request and return an honest, non-actuating reply.
 
     Uses the ambiguity-aware `classify_intent()` rather than the legacy
@@ -358,16 +377,21 @@ def process_voice_turn(turn: VoiceTurn, *, now: datetime | None = None, stop_req
     A stop is answered without a confirmation unless `stop_requires_confirmation`
     (default: the HYDRA_UMC_VOICE_UI_STOP_REQUIRES_CONFIRMATION server setting, off)
     says otherwise: only starting a movement has to be confirmed.
+
+    The interpretation carries the transcript (`heardText`, `normalizedText`) only when `include_heard_text`
+    (default: the HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT server setting, off) says so.
     """
     if stop_requires_confirmation is None:
         stop_requires_confirmation = stop_requires_confirmation_default()
+    if include_heard_text is None:
+        include_heard_text = include_heard_text_default()
     now = now if now is not None else datetime.now(timezone.utc)
     classification = classify_intent(turn.transcript)
-    interpretation: dict[str, object] = {
-        "heardText": turn.transcript,
-        "normalizedText": normalize_text(turn.transcript),
-        "matchedRules": sorted({match.name for match in classification.matches}),
-    }
+    interpretation: dict[str, object] = {}
+    if include_heard_text:
+        interpretation["heardText"] = turn.transcript
+        interpretation["normalizedText"] = normalize_text(turn.transcript)
+    interpretation["matchedRules"] = sorted({match.name for match in classification.matches})
     if classification.negated:
         return AssistantReply(
             request_id=turn.request_id,

@@ -125,3 +125,11 @@ authorize a *different*, later request - a changed parameter (a different
 mission, a different robot) always mints its own new, distinct token; the
 old one, if ever confirmed, still only ever confirms its own original,
 now-outdated action.
+
+## The transcript in a reply
+
+A reply's `interpretation` holds `matchedRules` and, only when the server sets `HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT=1`, `heardText` (the transcript as received) and `normalizedText`. The transcript is personal data, so it is off by default.
+
+## Limits
+
+The rules understand English only. The `locale` of a turn must be 2-35 characters long but is not used to choose rules.

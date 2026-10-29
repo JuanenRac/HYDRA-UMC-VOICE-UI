@@ -276,8 +276,23 @@ def _turn(text: str) -> VoiceTurn:
     return VoiceTurn(request_id="r1", transcript=text, locale="en-US")
 
 
+def test_a_reply_lists_only_the_matched_rules_unless_the_transcript_is_switched_on() -> None:
+    reply = process_voice_turn(_turn("Please, go home!"), include_heard_text=False)
+    assert reply.interpretation == {"matchedRules": ["go_home"]}
+    assert "Please" not in json.dumps(reply.to_payload())
+
+
+def test_the_transcript_is_off_by_default_and_the_server_setting_switches_it_on(monkeypatch) -> None:
+    monkeypatch.delenv("HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT", raising=False)
+    assert "heardText" not in process_voice_turn(_turn("go home")).interpretation
+    monkeypatch.setenv("HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT", "1")
+    assert process_voice_turn(_turn("go home")).interpretation["heardText"] == "go home"
+    monkeypatch.setenv("HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT", "yes")
+    assert "heardText" not in process_voice_turn(_turn("go home")).interpretation
+
+
 def test_every_reply_says_what_was_heard_and_which_rules_matched() -> None:
-    reply = process_voice_turn(_turn("Please, go home!"))
+    reply = process_voice_turn(_turn("Please, go home!"), include_heard_text=True)
     assert reply.interpretation == {
         "heardText": "Please, go home!",
         "normalizedText": "go home",

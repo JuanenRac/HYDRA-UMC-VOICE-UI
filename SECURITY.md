@@ -17,3 +17,7 @@ In a voice-controlled industrial system, a security flaw can lead to unauthorize
 3. **Response**: Initial acknowledgment within 48 hours.
 
 We follow a coordinated disclosure policy to ensure hardware safety before public release.
+
+## Personal data in a reply
+
+What a person says to the gateway is personal data. By default a reply does not repeat it: its `interpretation` lists only the rules that matched. Setting `HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT=1` on the server adds the transcript (`heardText`) and its normalised form (`normalizedText`) to every reply, and from then on any proxy, cache or phone log between the server and the client can see it. The gateway itself does not log transcripts.

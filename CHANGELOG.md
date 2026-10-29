@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased]
+
+- **The reply no longer repeats what was said.** The interpretation of a reply lists only the rules that matched; the transcript (`heardText`, `normalizedText`) is added only when the server sets `HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT=1`, because what a person said is personal data. The README in the eight languages and `SECURITY.md` say so, and the README states that the rules understand English only and that the `locale` of a turn is checked but not used. 3 new tests.
+
 ## [0.1.8] - A spoken stop is no longer held back by a confirmation and one client cannot fill the used-confirmation list any more
 
 - **A confirmation is for the person who asked, and a confirmed result can be verified.** A turn may name its `subject` (HYDRA-UMC-SERVER passes the signed-in user); the signed token carries it and confirms only for that subject, and a refusal does not use the token up. A confirmed result now has `subject`, `confirmedAtUtc` and `nonce`, and an HMAC-SHA256 `signature` when `HYDRA_UMC_VOICE_UI_RESULT_KEY` is set (the server checks it). `HYDRA_UMC_VOICE_UI_REQUIRE_SUBJECT=1` also refuses a turn or a confirmation that names nobody (off by default).
