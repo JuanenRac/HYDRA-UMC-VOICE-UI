@@ -37,7 +37,7 @@ def _print_identity() -> None:
     print(ROLE)
 
 
-def _run_analyze_audio(path: Path) -> int:
+def _run_analyze_audio(path: Path, threshold: float = 500.0, noise_ratio: float | None = None) -> int:
     if not path.is_file():
         print(f"ERROR: file not found: {path}")
         return 1
@@ -53,7 +53,7 @@ def _run_analyze_audio(path: Path) -> int:
     print(f"Duration: {clip.duration_seconds:.3f} s")
     print(f"RMS energy: {rms_energy(clip.samples):.1f}")
 
-    segments = detect_voice_segments(clip)
+    segments = detect_voice_segments(clip, threshold=threshold, noise_ratio=noise_ratio)
     if not segments:
         print("Voice segments: none detected (v0 energy-gate VAD)")
         return 0
@@ -111,6 +111,13 @@ def _run_serve(host: str, port: int) -> int:
     return 0
 
 
+def _positive_float(text: str) -> float:
+    value = float(text)
+    if not value > 0:
+        raise argparse.ArgumentTypeError("must be greater than zero")
+    return value
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="hydra-umc-voice-ui", description=ROLE)
     subparsers = parser.add_subparsers(dest="command")
@@ -119,6 +126,14 @@ def build_parser() -> argparse.ArgumentParser:
         "analyze-audio", help="Real WAV loading + energy-gate voice-activity detection."
     )
     audio_parser.add_argument("wav_file", type=Path, help="Path to a 16-bit PCM WAV file.")
+    gate = audio_parser.add_mutually_exclusive_group()
+    gate.add_argument("--threshold", type=_positive_float, default=500.0, help="RMS energy a 30 ms frame needs to count as voice (default 500).")
+    gate.add_argument(
+        "--noise-ratio",
+        type=_positive_float,
+        default=None,
+        help="Gate relative to the background noise of the clip: a frame is voice when its energy is this many times the noise floor.",
+    )
 
     intent_parser = subparsers.add_parser(
         "parse-intent", help="Real rule-based intent/entity parsing over transcribed text."
@@ -145,7 +160,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "analyze-audio":
-        return _run_analyze_audio(args.wav_file)
+        return _run_analyze_audio(args.wav_file, args.threshold, args.noise_ratio)
     if args.command == "parse-intent":
         return _run_parse_intent(args.text)
     if args.command == "serve":

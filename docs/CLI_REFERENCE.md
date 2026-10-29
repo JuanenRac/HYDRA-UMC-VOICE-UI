@@ -47,14 +47,29 @@ Voice UI (Hailo-10) - local STT/TTS pipeline for hands-free robotic mission cont
 
 ```
 $ hydra-umc-voice-ui analyze-audio -h
-usage: hydra-umc-voice-ui analyze-audio [-h] wav_file
+usage: hydra-umc-voice-ui analyze-audio [-h] [--threshold THRESHOLD |
+                                        --noise-ratio NOISE_RATIO]
+                                        wav_file
 
 positional arguments:
-  wav_file    Path to a 16-bit PCM WAV file.
+  wav_file              Path to a 16-bit PCM WAV file.
 
 options:
-  -h, --help  show this help message and exit
+  -h, --help            show this help message and exit
+  --threshold THRESHOLD
+                        RMS energy a 30 ms frame needs to count as voice
+                        (default 500).
+  --noise-ratio NOISE_RATIO
+                        Gate relative to the background noise of the clip: a
+                        frame is voice when its energy is this many times the
+                        noise floor.
 ```
+
+`--threshold` is a fixed gate (default 500). `--noise-ratio R` sets the gate to
+R times the background noise of the clip (the energy that only the quietest
+tenth of its frames fall below, never less than 1), so a recording with a
+constant hum is not read as speech from start to end. The two options cannot
+be combined.
 
 For the current in-memory v0 front-end, `analyze-audio` accepts only 16-bit
 PCM WAV input up to **16 MiB decoded PCM** and **300 seconds**. The input is

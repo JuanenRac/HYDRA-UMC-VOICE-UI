@@ -132,3 +132,16 @@ def test_parse_intent_says_what_the_gateway_would_do(capsys: pytest.CaptureFixtu
     # the text is normalised like the gateway does: filler words and punctuation do not hide the command
     assert main(["parse-intent", "Could you please go home!"]) == 0
     assert "Intent: go_home" in capsys.readouterr().out
+
+
+def test_analyze_audio_accepts_a_noise_relative_gate_and_refuses_both_gates(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    wav_path = tmp_path / "clip.wav"
+    _write_silent_wav(wav_path)
+
+    assert main(["analyze-audio", str(wav_path), "--noise-ratio", "3"]) == 0
+    assert "none detected" in capsys.readouterr().out
+    assert main(["analyze-audio", str(wav_path), "--threshold", "900"]) == 0
+    with pytest.raises(SystemExit):
+        main(["analyze-audio", str(wav_path), "--threshold", "900", "--noise-ratio", "3"])
+    with pytest.raises(SystemExit):
+        main(["analyze-audio", str(wav_path), "--noise-ratio", "0"])

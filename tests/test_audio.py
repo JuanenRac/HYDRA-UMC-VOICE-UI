@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from hydra_umc_voice_ui.audio import detect_voice_segments, load_wav, rms_energy
+from hydra_umc_voice_ui.audio import detect_voice_segments, estimate_noise_floor, load_wav, rms_energy
 
 SAMPLE_RATE = 8000
 
@@ -110,3 +110,37 @@ def test_detect_voice_segments_on_pure_silence_is_empty(tmp_path: Path) -> None:
     clip = load_wav(path)
 
     assert detect_voice_segments(clip, threshold=1000.0) == []
+
+
+def _hum(num_frames: int, *, amplitude: int = 800) -> list[int]:
+    return _tone(num_frames, amplitude=amplitude, frequency=50.0)
+
+
+def test_a_constant_hum_above_the_fixed_gate_reads_as_voice_from_start_to_end(tmp_path: Path) -> None:
+    hum = _hum(SAMPLE_RATE * 2)
+    _write_wav(tmp_path / "hum.wav", hum)
+    clip = load_wav(tmp_path / "hum.wav")
+    fixed = detect_voice_segments(clip, threshold=500.0)
+    assert len(fixed) == 1 and fixed[0].end_seconds - fixed[0].start_seconds > 1.9
+
+
+def test_a_gate_relative_to_the_noise_ignores_the_hum_and_keeps_the_speech(tmp_path: Path) -> None:
+    samples = _hum(SAMPLE_RATE // 2) + _tone(SAMPLE_RATE, amplitude=9000) + _hum(SAMPLE_RATE // 2)
+    _write_wav(tmp_path / "speech.wav", samples)
+    clip = load_wav(tmp_path / "speech.wav")
+    assert estimate_noise_floor(clip) > 400.0
+    segments = detect_voice_segments(clip, noise_ratio=3.0)
+    assert len(segments) == 1
+    assert 0.45 <= segments[0].start_seconds <= 0.55
+    assert 1.4 <= segments[0].end_seconds <= 1.6
+
+
+def test_the_relative_gate_never_falls_below_one_so_silence_is_not_voice(tmp_path: Path) -> None:
+    _write_wav(tmp_path / "quiet.wav", _silence(SAMPLE_RATE))
+    assert detect_voice_segments(load_wav(tmp_path / "quiet.wav"), noise_ratio=2.0) == []
+
+
+def test_a_noise_ratio_that_is_not_positive_is_refused(tmp_path: Path) -> None:
+    _write_wav(tmp_path / "a.wav", _tone(SAMPLE_RATE // 10))
+    with pytest.raises(ValueError):
+        detect_voice_segments(load_wav(tmp_path / "a.wav"), noise_ratio=0.0)

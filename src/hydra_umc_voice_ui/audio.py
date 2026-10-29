@@ -104,31 +104,52 @@ class VoiceSegment:
     end_seconds: float
 
 
+def _frame_energies(clip: AudioClip, frame_size: int) -> list[float]:
+    energies: list[float] = []
+    for frame_index in range(0, clip.frame_count, frame_size):
+        start_sample = frame_index * clip.channels
+        end_sample = min((frame_index + frame_size) * clip.channels, len(clip.samples))
+        energies.append(rms_energy(clip.samples[start_sample:end_sample]))
+    return energies
+
+
+def estimate_noise_floor(clip: AudioClip, *, frame_ms: float = 30.0, percentile: float = 0.1) -> float:
+    """The energy below which only `percentile` of the frames of the clip fall: the background noise of the recording."""
+    if clip.channels == 0 or clip.sample_rate == 0 or clip.frame_count == 0:
+        return 0.0
+    energies = sorted(_frame_energies(clip, max(1, int(clip.sample_rate * frame_ms / 1000))))
+    return energies[min(len(energies) - 1, int(len(energies) * percentile))]
+
+
 def detect_voice_segments(
-    clip: AudioClip, *, threshold: float = 500.0, frame_ms: float = 30.0
+    clip: AudioClip, *, threshold: float = 500.0, frame_ms: float = 30.0, noise_ratio: float | None = None
 ) -> list[VoiceSegment]:
     """Real energy-gate voice activity detection over mono-summed frames.
 
     Splits the clip into `frame_ms` windows, computes each window's real
     RMS energy across all channels, and merges consecutive windows above
-    `threshold` into one segment. This is a real, simple VAD primitive -
-    not the neural VAD a production Whisper pipeline would eventually use,
-    but a genuine signal-processing step a real STT front-end needs before
-    any transcription can happen.
+    the gate into one segment. The gate is the fixed `threshold`, or, when
+    `noise_ratio` is given, that many times the background noise of the clip
+    (`estimate_noise_floor`) but never less than 1, so a recording with a
+    constant hum does not read as speech from start to end. This is a real,
+    simple VAD primitive - not the neural VAD a production Whisper pipeline
+    would eventually use, but a genuine signal-processing step a real STT
+    front-end needs before any transcription can happen.
     """
     if clip.channels == 0 or clip.sample_rate == 0 or clip.frame_count == 0:
         return []
+    if noise_ratio is not None:
+        if noise_ratio <= 0:
+            raise ValueError("noise_ratio must be greater than zero")
+        threshold = max(1.0, estimate_noise_floor(clip, frame_ms=frame_ms) * noise_ratio)
 
     frame_size = max(1, int(clip.sample_rate * frame_ms / 1000))
     segments: list[VoiceSegment] = []
     active_start: float | None = None
 
-    for frame_index in range(0, clip.frame_count, frame_size):
-        start_sample = frame_index * clip.channels
-        end_sample = min((frame_index + frame_size) * clip.channels, len(clip.samples))
-        window = clip.samples[start_sample:end_sample]
-        is_active = rms_energy(window) >= threshold
-        window_start_s = frame_index / clip.sample_rate
+    for position, energy in enumerate(_frame_energies(clip, frame_size)):
+        window_start_s = position * frame_size / clip.sample_rate
+        is_active = energy >= threshold
 
         if is_active and active_start is None:
             active_start = window_start_s
