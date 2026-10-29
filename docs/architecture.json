@@ -1,0 +1,169 @@
+{
+  "repo": "HYDRA-UMC-VOICE-UI",
+  "ecosystem": "hydra",
+  "tagline": "Voice activity and rule-based intent today; a confirmation step stands between a phrase and anything that happens.",
+  "description": "HYDRA-UMC-VOICE-UI measures voice energy in WAV audio, parses recognised text into intents with rules, and serves a rate-limited HTTP gateway that issues and checks confirmation tokens, never sending a physical command.",
+  "columns": [
+    "WHO CALLS IT",
+    "THIS REPOSITORY",
+    "WHAT IS NOT HERE YET"
+  ],
+  "nodes": [
+    {
+      "id": "cli",
+      "column": 0,
+      "level": "tested",
+      "title": "CLI",
+      "lines": [
+        "analyze-audio, parse-intent,",
+        "serve"
+      ],
+      "code": [
+        "src/hydra_umc_voice_ui/main.py"
+      ]
+    },
+    {
+      "id": "wat",
+      "column": 0,
+      "level": "tested",
+      "title": "Watch flow",
+      "lines": [
+        "text from the watch, via",
+        "the phone and the server"
+      ],
+      "code": [
+        "src/hydra_umc_voice_ui/http_service.py"
+      ]
+    },
+    {
+      "id": "stt",
+      "column": 2,
+      "level": "untested",
+      "title": "Speech recognition",
+      "lines": [
+        "planned on Hailo-10;",
+        "not part of this code"
+      ]
+    },
+    {
+      "id": "srv",
+      "column": 2,
+      "level": "contract",
+      "title": "Relaying server",
+      "lines": [
+        "checks the signed result;",
+        "owns the real command"
+      ]
+    },
+    {
+      "id": "htp",
+      "column": 1,
+      "level": "tested",
+      "title": "http_service.py",
+      "lines": [
+        "small HTTP boundary;",
+        "token away from loopback"
+      ],
+      "code": [
+        "src/hydra_umc_voice_ui/http_service.py"
+      ]
+    },
+    {
+      "id": "rat",
+      "column": 1,
+      "level": "tested",
+      "title": "ratelimit.py",
+      "lines": [
+        "sliding window of requests",
+        "per client address"
+      ],
+      "code": [
+        "src/hydra_umc_voice_ui/ratelimit.py"
+      ]
+    },
+    {
+      "id": "gat",
+      "column": 1,
+      "level": "tested",
+      "title": "gateway.py",
+      "lines": [
+        "text to intent, with a",
+        "signed confirmation token"
+      ],
+      "code": [
+        "src/hydra_umc_voice_ui/gateway.py"
+      ]
+    },
+    {
+      "id": "int",
+      "column": 1,
+      "level": "tested",
+      "title": "intent.py",
+      "lines": [
+        "rule-based intents over",
+        "a small command list"
+      ],
+      "code": [
+        "src/hydra_umc_voice_ui/intent.py"
+      ]
+    },
+    {
+      "id": "aud",
+      "column": 1,
+      "level": "tested",
+      "title": "audio.py",
+      "lines": [
+        "WAV loading and voice",
+        "detection by energy"
+      ],
+      "code": [
+        "src/hydra_umc_voice_ui/audio.py"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "cli",
+      "to": "aud",
+      "level": "tested"
+    },
+    {
+      "from": "cli",
+      "to": "int",
+      "level": "tested"
+    },
+    {
+      "from": "wat",
+      "to": "htp",
+      "level": "tested"
+    },
+    {
+      "from": "htp",
+      "to": "rat",
+      "level": "tested"
+    },
+    {
+      "from": "htp",
+      "to": "gat",
+      "level": "tested"
+    },
+    {
+      "from": "gat",
+      "to": "int",
+      "level": "tested"
+    },
+    {
+      "from": "gat",
+      "to": "srv",
+      "level": "contract",
+      "label": "signed result"
+    },
+    {
+      "from": "stt",
+      "to": "int",
+      "level": "untested",
+      "label": "planned"
+    }
+  ],
+  "footer": "Tried with sample audio and the HTTP gateway on a computer; no microphone, no recogniser and no robot."
+}

@@ -1,3 +1,9 @@
+<!-- =============================================================================
+HYDRA-UMC-VOICE-UI - Local speech-to-action front end
+Copyright (C) JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
+GPL-3.0-or-later - see LICENSE
+============================================================================= -->
+
 <p align="center">
   <img src="images/HYDRA_UMC_BANNER.svg" alt="HYDRA-UMC-VOICE-UI banner" width="100%">
 </p>
@@ -9,16 +15,19 @@
 ### 🔊 本地硬件加速的语音转动作流水线
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Licencia-GPL%203.0-blue.svg" alt="GPL 3.0">
+  <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/STT-Whisper%20Local-FF6F00.svg" alt="STT">
-  <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Hailo-10">
+  <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Platform">
+  <img src="https://img.shields.io/badge/Tests-195%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Version-0.1.8-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
-
-**诚实核查 - 今天真正能运行的部分：** WAV 加载与基于能量阈值的语音活动检测（`audio.py`）、基于规则的意图/实体解析器及其具备歧义感知能力的 `classify_intent()`（`intent.py`）、受限且需要确认的文本到意图网关（`gateway.py`），以及面向 Watch 中继的经过认证的 HTTP 边界（`http_service.py`）都是真实且经过测试的——169 个通过的测试（`pytest tests/`），包括针对一个真实运行中的 `VoiceGatewayServer` 的端到端测试套件（令牌的必需/接受/拒绝、真实的 `POST /v1/voice/turn` 往返、格式错误/超大的请求体，以及真正缺失的 `Content-Length`）。这些功能都不需要麦克风、Whisper 模型或 Hailo-10 NPU 就能运行或测试——`analyze-audio`/`parse-intent`/`serve` 如今都能针对一个 WAV 文件或已转写的文本正常工作。新增的 `Dockerfile` 复用了已经在真实 CM5 systemd 单元上验证过的相同 CLI 参数，但其本身尚未经过构建测试——这台开发机器上没有 Docker 运行时。本 README 自己路线图中描述的真正的 Whisper STT 与神经网络 TTS 流水线仍然完全是愿景：目前尚未集成任何语音识别或语音合成模型，而且这个环境也没有可以运行它的实体 Hailo-10 模块。具体已经交付了什么，请参见 `CHANGELOG.md`，以及下文第 1 节自己的功能列表中按功能划分的真实/未来对照。
 
 ---
 
 > **安全与安防现状:**本生态系统不是经认证的安全系统。目前尚无硬件 E-STOP 通路,没有由固件强制执行的限位或联锁,也没有经过验证的运动指令;固件映像使用 CRC32 和共享密钥的 HMAC-SHA256 校验,而非非对称签名;TLS 与双向 TLS 均为可选项,默认关闭;自制电路板尚未组装或测试。在依赖此处任何说法来保障人身安全之前,请先阅读[安全基线](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/SECURITY_BASELINE.md)和[威胁模型](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/THREAT_MODEL.md)。
+
+---
 
 ## 📋 速览
 
@@ -26,10 +35,12 @@
 |---|---|
 | 版本 | `0.1.8` |
 | 成熟度 | 可用 |
-| 测试 | 85 (`pytest tests/`) |
+| 测试 | 195 (`python -m pytest -q tests`) |
 | 技术栈 | Python / Rule-based intent parser / Energy-gate VAD |
 | 目标 | HYDRA-UMC 工作单元的 Raspberry Pi CM5 |
 | 真实硬件 | 尚未：此版本没有在真实硬件上运行的记录 |
+
+**跳转：** [概述](#-概述) · [架构](#-架构) · [快速开始](#-快速开始) · [测试](#-测试) · [仓库结构](#-仓库结构) · [相关项目](#-相关项目)
 
 ## 🚦 项目状态
 
@@ -40,11 +51,11 @@
 | 领域 | 状态 | 在这里的含义 |
 |---|---|---|
 | 软件 | 🟡 | 主要用途可用；上面的诚实性检查列出了仍然缺少的内容 |
-| 测试 | 🟢 | 85 项自动测试，每次变更都会运行 |
+| 测试 | 🟢 | 195 项自动测试，每次变更都会运行 |
 | 真实硬件 | 🔴 | 尚未：此版本没有在真实硬件上运行的记录 |
 | 文档 | 🟢 | 八种语言的 README，每次变更都会与清单核对 |
 
-## 1. 🛠️ 技术概述
+## 🎯 概述
 
 **HYDRA-UMC-VOICE-UI** 是 HYDRA-UMC 生态系统的本地语音交互层。它提供由
 Hailo-10 NPU 加速的高性能 STT（语音转文本）和 TTS（文本转语音）流水线。
@@ -65,11 +76,19 @@ Hailo-10 NPU 加速的高性能 STT（语音转文本）和 TTS（文本转语�
 * 🛡️ **噪声消除：** 针对高环境噪声的工业环境进行优化。*（计划中）*
 * 👨‍👩‍👧 **认知 AI 节点子项目：** 作为
   [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE) 下 4 个同级服务之一运行（与 VLA-Engine、Semantic-Planner 和 Docs-QA 并列），共享父项目的 HydraOS 镜像和模型权重，而非各自保留独立副本。
-* 📦 **里程表式版本管理：** `pyproject.toml` 中的版本只由显式的 `bump` 命令提升（`python tools/hydra_project_tool.py bump`，它会运行 `bump_version.py`）- 构建绝不会更改它。
 
----
+## 🧩 在 HYDRA-UMC 中的角色
 
-## 2. 🔄 语音流水线流程
+**HYDRA-UMC-VOICE-UI** 是认知节点的语音前端：它检测 WAV 文件中的语音，用规则把已识别的文本解析为意图，并为手表流程提供有界的 HTTP 网关，在转交任何内容之前先要求确认。它目前还不识别语音，也从不发送物理指令。
+
+## 🏛️ 架构
+
+<p align="center">
+  <img src="images/architecture.svg" alt="HYDRA-UMC-VOICE-UI architecture" width="100%">
+</p>
+
+<details>
+<summary>图表的文本版本（Mermaid）</summary>
 
 ```mermaid
 flowchart LR
@@ -80,9 +99,9 @@ flowchart LR
     TTS --> SPK["Speaker Output"]
 ```
 
----
+</details>
 
-## 3. 🧱 架构与设计决策
+### 架构与设计决策
 
 本仓库是 Cognitive AI Node 系列的**子项目**——其父项目
 [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE) 拥有共享的 HydraOS 镜像和量化模型权重，并将本服务与其另外 3 个同级项目（VLA-Engine、Semantic-Planner、Docs-QA）一同接入 `docker-compose.yml`：
@@ -97,52 +116,41 @@ flowchart LR
 * **为何 Watch 网关使用 `classify_intent()` 而非旧版 `parse_intent()`。** 对现有调用方而言，`parse_intent()` 仍保持"第一个匹配即胜出"的行为不变，依旧按原样测试；但一段真正同时匹配多个已知命令的真实转录文本（例如同时包含"stop"和"status"）对于一个全部职责就是判断运动命令是否需要确认的网关来说，是一个真实的、与安全相关的歧义——`classify_intent()` 会检查每一条规则，并报告一个真实、明确区分的歧义情形，而不是悄悄地解析为恰好排在最前面的那条规则。
 * **为何 `normalize_text()` 在匹配前应用 Unicode NFKC。** 一些语音转文本流水线会输出全角拉丁字母及其他兼容性 Unicode 形式——这些是与普通 ASCII 不同的码点，因此就 `\b...\b` 正则表达式而言并不算"这个词"。NFKC 会先将它们折叠为普通等价形式，这样一条与已知规则语义相同的命令就不会仅仅因为编码方式的不同而被当成诚实的未命中。
 
----
+### WATCH 语音网关（v0）
 
-## 📂 目录结构
+`python -m hydra_umc_voice_ui.main serve` 为已配对的 HYDRA-UMC-WATCH 集成提供有意限制的本地 HTTP 网关：`GET /health`、`POST /v1/voice/turn` 和 `POST /v1/voice/confirm`。网关会验证类型化的 `voice_turn` 负载，使用现有的确定性意图解析器并返回 `assistant_reply`；它不控制机器人硬件。
 
-```text
-HYDRA-UMC-VOICE-UI/
-├── src/hydra_umc_voice_ui/
-│   ├── __init__.py            # 包说明与版本
-│   ├── audio.py               # 真实的 WAV 加载 + 基于能量的语音活动检测
-│   ├── intent.py               # 真实的基于规则的意图/实体解析器 + 具备歧义感知能力的 classify_intent()
-│   ├── gateway.py               # 受限的文本到意图网关,由 Watch 认知流程共享
-│   ├── http_service.py          # 面向 Watch→认知语音路径的小型 stdlib HTTP 边界
-│   ├── main.py                  # 入口点 + 真实的 `analyze-audio`/`parse-intent` 子命令
-│   └── ratelimit.py             # 按客户端地址的滑动窗口请求限制 (防止单个客户端填满确认列表)
-├── tests/                    # 真实测试：WAV 夹具、VAD、意图规则、gateway、端到端 CLI
-├── docs/                     # 文档与指令目录
-├── images/                   # 媒体与图表
-├── deploy/
-│   └── voice-ui.env.example  # 本地 CM5 网关的环境变量模板
-├── systemd/
-│   └── hydra-umc-voice-ui.service # 本地 CM5 语音 HTTP 服务的 systemd 单元
-├── tools/
-│   ├── build_test.py         # 不递增版本号的构建检查
-│   ├── ci_validate.py        # CI 使用的清单/CHANGELOG/文档校验
-│   ├── _doc_policy.py        # 家族共享的文档规则 (HYDRA-UMC-SDK 的副本,保持同步)
-│   ├── _readme_parity.py     # 检查八个 README 结构一致 (HYDRA-UMC-SDK 的副本,保持同步)
-│   └── hydra_project_tool.py # 每个仓库相同的命令: validate、test、ci、version、status、bump
-├── build/                    # 本地构建输出（已被 git 忽略）
-├── Dockerfile                # 用于经认证 HTTP 网关的最小容器镜像（非 root）
-├── pyproject.toml            # 包元数据（里程表式递增版本号）
-├── bump_version.py           # 里程表式版本递增（仅由显式 `bump` 命令运行）
-├── bump_manifest_version.py  # 将 hydra-umc.project.json 的版本与原生版本同步(--sync)
-├── build.sh / build.bat      # 创建 venv、安装（含 dev 附加依赖）、验证导入、运行测试
-├── build-test.sh / build-test.bat # tools/build_test.py 的非破坏性包装脚本（不改动版本号/manifest/CHANGELOG）
-└── run.sh / run.bat          # 运行入口点（转发参数，例如 `analyze-audio`）
+回环开发可在无令牌的情况下运行。非回环绑定要求 `HYDRA_UMC_VOICE_UI_TOKEN` 以及匹配的 `Authorization: Bearer` 标头。该 API 绝不传输原始音频，且与运动相关的意图始终返回 `requiresConfirmation: true`，并附带一个真实且有限定的 `confirmationToken`——Watch 客户端会把它回传给 `POST /v1/voice/confirm`，后者报告 `confirmed`/`expired`/`invalid`（绝不是单纯的布尔值），自身不会派发任何内容。完整契约见下文 [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) 的确认部分。
+
+一段真正同时匹配多个已知命令的转录文本会被拒绝，并返回一个真实、明确区分的回复，而不是被悄悄地解析为单一的理解结果：
+
+```json
+// POST /v1/voice/turn
+{"type": "voice_turn", "requestId": "watch-voice-001", "transcript": "stop the status check", "locale": "en-US"}
+
+// -> {"type":"assistant_reply","requestId":"watch-voice-001","text":"That request matched more than one action (status, stop). Please rephrase it more specifically.","level":"ATTENTION","speak":true,"requiresConfirmation":false,"visualState":"clarification","interpretation":{"heardText":"stop the status check","normalizedText":"stop the status check","matchedRules":["status","stop"]}}
 ```
 
-> **注意：** `hardware/` 和 `firmware/` 已被省略——本节点运行在现成的
-> CM5 + Hailo-10 M.2 模块上，没有自己的硬件/固件设计。`os/` 和
-> `models/` 也已被省略——HydraOS 镜像和共享的 Hailo-10 模型权重存放在
-> 父项目 `HYDRA-UMC-COGNITIVE-NODE` 中，本项目作为一项服务接入其中
-> （见其 `docker-compose.yml`）。
+完整的请求协议和部署边界请参阅 [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md)，从已安装CLI真实捕获的每个 `analyze-audio`/`parse-intent`/`serve` 示例请参阅 [CLI_REFERENCE.md](docs/CLI_REFERENCE.md)。
 
----
+## 🚀 快速开始
 
-## ⚙️ 构建与运行
+需要 Python 3.10 或更高版本。
+
+```bash
+./build.sh  # Linux, macOS (build.bat on Windows)
+./run.sh analyze-audio clip.wav
+./run.sh parse-intent "stop robot one"
+./run.sh serve --port 8091
+```
+
+## 🧪 测试
+
+运行 `python -m pytest -q tests` 会执行 195 个自动测试。 不需要硬件，也不需要这台机器以外的任何东西。
+
+CI 运行 `HYDRA_UMC_CI=1 python tools/ci_validate.py`，检查清单、文档、八个 README 和图片。
+
+## 🏗️ 构建与发布
 
 需要 Python >= 3.10。
 
@@ -182,32 +190,58 @@ run.bat parse-intent "status of robot 3"
 * **`pip install -e .` 失败。** 通常是 `.venv/` 已过期。删除 `.venv/` 文件夹并重新运行 `./build.sh`/`build.bat` 重新创建它。
 * **`import OK` 从未打印。** 意味着 `python -c "import hydra_umc_voice_ui"` 本身失败了——在激活 venv 的情况下重新运行以查看真实的回溯信息。
 
----
+## 📂 仓库结构
 
-## 🎙️ WATCH 语音网关（v0）
+<p align="center">
+  <img src="images/repository-structure.svg" alt="Repository structure of HYDRA-UMC-VOICE-UI" width="100%">
+</p>
 
-`python -m hydra_umc_voice_ui.main serve` 为已配对的 HYDRA-UMC-WATCH 集成提供有意限制的本地 HTTP 网关：`GET /health`、`POST /v1/voice/turn` 和 `POST /v1/voice/confirm`。网关会验证类型化的 `voice_turn` 负载，使用现有的确定性意图解析器并返回 `assistant_reply`；它不控制机器人硬件。
+<details>
+<summary>目录树的文本版本</summary>
 
-回环开发可在无令牌的情况下运行。非回环绑定要求 `HYDRA_UMC_VOICE_UI_TOKEN` 以及匹配的 `Authorization: Bearer` 标头。该 API 绝不传输原始音频，且与运动相关的意图始终返回 `requiresConfirmation: true`，并附带一个真实且有限定的 `confirmationToken`——Watch 客户端会把它回传给 `POST /v1/voice/confirm`，后者报告 `confirmed`/`expired`/`invalid`（绝不是单纯的布尔值），自身不会派发任何内容。完整契约见下文 [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) 的确认部分。
-
-一段真正同时匹配多个已知命令的转录文本会被拒绝，并返回一个真实、明确区分的回复，而不是被悄悄地解析为单一的理解结果：
-
-```json
-// POST /v1/voice/turn
-{"type": "voice_turn", "requestId": "watch-voice-001", "transcript": "stop the status check", "locale": "en-US"}
-
-// -> {"type":"assistant_reply","requestId":"watch-voice-001","text":"That request matched more than one action (status, stop). Please rephrase it more specifically.","level":"ATTENTION","speak":true,"requiresConfirmation":false,"visualState":"clarification","interpretation":{"heardText":"stop the status check","normalizedText":"stop the status check","matchedRules":["status","stop"]}}
+```text
+HYDRA-UMC-VOICE-UI/
+├── src/hydra_umc_voice_ui/          源代码
+│   ├── __init__.py                  包说明与版本
+│   ├── audio.py                     真实的 WAV 加载 + 基于能量的语音活动检测
+│   ├── intent.py                    真实的基于规则的意图/实体解析器 + 具备歧义感知能力的 classify_intent()
+│   ├── gateway.py                   受限的文本到意图网关,由 Watch 认知流程共享
+│   ├── http_service.py              面向 Watch→认知语音路径的小型 stdlib HTTP 边界
+│   ├── main.py                      入口点 + 真实的 `analyze-audio`/`parse-intent` 子命令
+│   └── ratelimit.py                 按客户端地址的滑动窗口请求限制 (防止单个客户端填满确认列表)
+├── tests/                           真实测试：WAV 夹具、VAD、意图规则、gateway、端到端 CLI
+├── docs/                            文档与指令目录
+├── images/                          媒体与图表
+├── deploy/
+├── systemd/                         服务单元
+├── tools/                           项目工具和 CI 检查
+├── .github/                         CI 工作流和 Issue 模板
+├── Dockerfile                       用于经认证 HTTP 网关的最小容器镜像（非 root）
+├── pyproject.toml                   包的元数据
+├── bump_version.py                  显式提升版本
+├── bump_manifest_version.py         将 hydra-umc.project.json 的版本与原生版本同步(--sync)
+├── build.sh / build.bat             创建 venv、安装（含 dev 附加依赖）、验证导入、运行测试
+├── build-test.sh / build-test.bat   tools/build_test.py 的非破坏性包装脚本（不改动版本号/manifest/CHANGELOG）
+├── run.sh / run.bat                 运行入口点（转发参数，例如 `analyze-audio`）
+├── CHANGELOG.md                     每个版本的变更
+├── hydra-umc.project.json           清单：版本、成熟度、系列
+└── test.sh                          运行测试
 ```
 
-完整的请求协议和部署边界请参阅 [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md)，从已安装CLI真实捕获的每个 `analyze-audio`/`parse-intent`/`serve` 示例请参阅 [CLI_REFERENCE.md](docs/CLI_REFERENCE.md)。
+</details>
 
-## 🚀 路线图
+## 🗺️ 路线图与已知限制
+
+**当前已知限制**
+
 * **第一阶段：** 在 Hailo-10 上部署 VLA 引擎并进行多模态输入处理。
 * **第二阶段：** 语义规划器与集群行为模型及长期记忆的集成。
 * **第三阶段：** 语音 UI 的低延迟本地执行以及工业噪声消除。
 * **第四阶段：** 多语言支持（英语、西班牙语、德语、法语）以及与 Dashboard AI 的完全集成。
 
----
+## 🌍 语言
+
+本 README 和仓库文档提供八种语言：英语、西班牙语、德语、法语、意大利语、日语、中文和葡萄牙语（葡萄牙）。它们同时编写，并由 CI 检查八个文件拥有相同的章节和相同的链接。 本仓库没有自己的界面或消息目录，因此没有需要翻译的界面文字。
 
 ## 🔗 相关项目
 
@@ -300,20 +334,26 @@ run.bat parse-intent "status of robot 3"
 - **[HYDRA-UMC-OPS-AGENT](https://github.com/JuanenRac/HYDRA-UMC-OPS-AGENT)** — 维护事件协调器：一个低权限的边缘角色采集经过脱敏的库存/健康快照，一个控制面角色以只读方式渲染它，并请求某个 AI 提供方给出诊断建议——从不应用补丁，也从不部署任何内容。
 - **[HYDRA-UMC-DEV-SERVER](https://github.com/JuanenRac/HYDRA-UMC-DEV-SERVER)** — 可复现的开发主机（Raspberry Pi 5 / CM5），保存整个生态系统的源代码，并在持久队列下运行有界的构建/测试任务；这是专用的开发角色，明确区别于运行中的 CM5。
 
----
+## 📚 文档
 
-## 📚 文档与社区
+更多阅读：
 
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** —— 提交 Pull Request 所需的技术栈和编码规范。
-- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** —— 本社区所期望的行为准则。
-- **[SECURITY.md](SECURITY.md)** —— 如何报告漏洞，以及本项目真实的安全关注重点。
-- **[SUPPORT.md](SUPPORT.md)** —— 在哪里提问和报告缺陷。
-- **[LICENSE.md](LICENSE.md)** —— 本项目自身的许可证。
+* [生态系统的安全基线](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/SECURITY_BASELINE.md)
+* [生态系统的威胁模型](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/THREAT_MODEL.md)
+* [本仓库的更新日志](CHANGELOG.md)
+* [本仓库的许可证](LICENSE.md)
+
+## 🤝 参与贡献与社区
+
+* 提交 pull request 之前，请运行 `HYDRA_UMC_CI=1 py -3 tools/ci_validate.py`（或 `HYDRA_UMC_CI=1 python3 tools/ci_validate.py`）：它必须输出 `CI_VALIDATION=PASS`。此检查不要运行 `build.sh` 或 `build.bat`；构建不是检查。
+* 八个 README 由 HYDRA-UMC-DOCS 中的同一个源生成；请勿手工编辑。修改源文件，再用 `tools/make_readmes.py` 重新生成。
+* 不要在 README 中声称尚未运行过的内容：属实时请写“仅模拟”或“尚未在硬件上试过”。
+* 请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)、[行为准则](CODE_OF_CONDUCT.md)、[SECURITY.md](SECURITY.md) 和 [SUPPORT.md](SUPPORT.md)。
 
 ## 👤 作者
-**JuanenRac** (Electro Hobby 3D)
-📧 electrohobby3d@gmail.com
-📺 [youtube.com/@electrohobby3d](https://youtube.com/@electrohobby3d)
+
+**JuanenRac (Electro Hobby 3D)** · electrohobby3d@gmail.com
 
 ## 📜 许可证
-GPL-3.0 —— 详见 LICENSE。
+
+GPL-3.0-or-later - [LICENSE](LICENSE).

@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **README in the universal layout:** the README and its seven translations follow the layout that the four families share (22 sections in a fixed order), with an architecture picture and a repository-structure picture drawn from `docs/architecture.json` and `docs/structure.json`; the CI validator checks both pictures and the file tree.
+
 - **The Server can set the transcript and the minimum confidence for each turn.** A turn may carry `options` (`includeHeardText`, `minConfidence`), which the Server fills from what an administrator saved in Server Admin; the environment of this service still wins, a turn without `options` behaves as before, and a bad value is refused with a 400. Documented in `docs/WATCH_VOICE_GATEWAY.md`. 14 new tests.
 - **The layout of the README is checked in the CI:** the validator runs `tools/universal_readme_check.py` and lists, as a warning, what differs from the universal layout of the README.
 - **A movement heard with low confidence is not accepted.** A turn may carry `confidence` (0 to 1, from the speech recognizer); a request to start a mission or go home below `HYDRA_UMC_VOICE_UI_MIN_CONFIDENCE` (default 0.6, 0 switches it off) is answered with a request to repeat it, with no intent and no confirmation token. A stop and a status request are never held back. Documented in `docs/WATCH_VOICE_GATEWAY.md`. 5 new tests.
@@ -260,7 +262,7 @@ All notable changes to this project are documented here.
 - Initial Python scaffolding: `pyproject.toml` (setuptools, src-layout),
   `src/hydra_umc_voice_ui/__init__.py` + `main.py` (real entry point -
   prints identity/version/role, exits 0).
-- `bump_version.py` - odometer-style version bump applied to
+- `bump_version.py` - version bump applied to
   `pyproject.toml` and mirrored into `__init__.py`.
 - `build.sh` / `build.bat` - create/activate a venv, install the package
   editable, verify it compiles and imports.

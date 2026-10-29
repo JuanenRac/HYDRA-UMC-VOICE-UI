@@ -1,0 +1,591 @@
+{
+  "repo": "HYDRA-UMC-VOICE-UI",
+  "ecosystem": "hydra",
+  "svg": "en",
+  "exempt": [
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "SUPPORT.md",
+    "LICENSE",
+    "LICENSE.md",
+    "test.bat"
+  ],
+  "cards": [
+    {
+      "name": "src/hydra_umc_voice_ui/",
+      "span": 3,
+      "accent": "a",
+      "rows": [
+        {
+          "name": "__init__.py",
+          "desc": {
+            "en": "Package description and version",
+            "es": "Descripción y versión del paquete",
+            "de": "Paketbeschreibung und Version",
+            "fr": "Description et version du paquet",
+            "it": "Descrizione e versione del pacchetto",
+            "ja": "パッケージの説明とバージョン",
+            "zh": "包说明与版本",
+            "pt": "Descrição e versão do pacote"
+          },
+          "tree_desc": {
+            "en": "Package description and version",
+            "es": "Descripción y versión del paquete",
+            "de": "Paketbeschreibung und Version",
+            "fr": "Description et version du paquet",
+            "it": "Descrizione e versione del pacchetto",
+            "ja": "パッケージの説明とバージョン",
+            "zh": "包说明与版本",
+            "pt": "Descrição e versão do pacote"
+          }
+        },
+        {
+          "name": "audio.py",
+          "desc": {
+            "en": "Real WAV loading + energy-gate",
+            "es": "Carga real de WAV + deteccion de actividad",
+            "de": "Echtes WAV-Laden +",
+            "fr": "Chargement WAV réel + détection d'activité",
+            "it": "Caricamento WAV reale + rilevamento",
+            "ja": "実際の WAV 読み込み + エネルギーによ",
+            "zh": "真实的 WAV 加载 + 基于能量的语音活动",
+            "pt": "Carregamento real de WAV + deteção de"
+          },
+          "tree_desc": {
+            "en": "Real WAV loading + energy-gate voice-activity detection",
+            "es": "Carga real de WAV + deteccion de actividad de voz por energia",
+            "de": "Echtes WAV-Laden + Sprachaktivitätserkennung per Energie",
+            "fr": "Chargement WAV réel + détection d'activité vocale par énergie",
+            "it": "Caricamento WAV reale + rilevamento attività vocale per energia",
+            "ja": "実際の WAV 読み込み + エネルギーによる音声活動検出",
+            "zh": "真实的 WAV 加载 + 基于能量的语音活动检测",
+            "pt": "Carregamento real de WAV + deteção de atividade de voz por limiar de energia"
+          }
+        },
+        {
+          "name": "intent.py",
+          "desc": {
+            "en": "Real rule-based intent/entity parser +",
+            "es": "Parser real de intencion/entidades basado",
+            "de": "Echter regelbasierter",
+            "fr": "Analyseur réel d'intention/entités à base",
+            "it": "Parser reale di intenti/entità basato su",
+            "ja": "実際のルールベース意図/エンティティパーサー",
+            "zh": "真实的基于规则的意图/实体解析器 + 具备歧",
+            "pt": "Analisador real de intenções/entidades por"
+          },
+          "tree_desc": {
+            "en": "Real rule-based intent/entity parser + ambiguity-aware classify_intent()",
+            "es": "Parser real de intencion/entidades basado en reglas + classify_intent() consciente de ambigüedad",
+            "de": "Echter regelbasierter Absicht-/Entitäten-Parser + ambiguitätsbewusstes classify_intent()",
+            "fr": "Analyseur réel d'intention/entités à base de règles + classify_intent() conscient de l'ambiguïté",
+            "it": "Parser reale di intenti/entità basato su regole + classify_intent() consapevole dell'ambiguità",
+            "ja": "実際のルールベース意図/エンティティパーサー + あいまいさを考慮した classify_intent()",
+            "zh": "真实的基于规则的意图/实体解析器 + 具备歧义感知能力的 classify_intent()",
+            "pt": "Analisador real de intenções/entidades por regras + classify_intent() sensível a ambiguidades"
+          }
+        },
+        {
+          "name": "gateway.py",
+          "desc": {
+            "en": "Bounded text-to-intent gateway shared",
+            "es": "Puerta de enlace texto-a-intención acotada",
+            "de": "Begrenztes Text-zu-Intent-Gateway",
+            "fr": "Passerelle texte-vers-intention bornée",
+            "it": "Gateway testo-a-intento limitato",
+            "ja": "Watchの認知フローが共有する",
+            "zh": "受限的文本到意图网关,由 Watch 认知流",
+            "pt": "Gateway limitado de texto para intenção"
+          },
+          "tree_desc": {
+            "en": "Bounded text-to-intent gateway shared by the Watch cognitive flow",
+            "es": "Puerta de enlace texto-a-intención acotada, compartida por el flujo cognitivo de Watch",
+            "de": "Begrenztes Text-zu-Intent-Gateway, geteilt mit dem Watch-Cognitive-Flow",
+            "fr": "Passerelle texte-vers-intention bornée, partagée par le flux cognitif Watch",
+            "it": "Gateway testo-a-intento limitato, condiviso dal flusso cognitivo di Watch",
+            "ja": "Watchの認知フローが共有する、範囲を限定したテキスト→意図ゲートウェイ",
+            "zh": "受限的文本到意图网关,由 Watch 认知流程共享",
+            "pt": "Gateway limitado de texto para intenção partilhado pelo fluxo cognitivo do Watch"
+          }
+        },
+        {
+          "name": "http_service.py",
+          "desc": {
+            "en": "Small stdlib HTTP boundary",
+            "es": "Pequeño límite HTTP de stdlib para la ruta",
+            "de": "Kleine stdlib-HTTP-Grenze für den",
+            "fr": "Petite frontière HTTP stdlib pour le chemin",
+            "it": "Piccolo confine HTTP stdlib per il percorso",
+            "ja": "Watch→認知の音声経路のための小さなst",
+            "zh": "面向 Watch→认知语音路径的小型 std",
+            "pt": "Pequena fronteira HTTP da biblioteca padrão"
+          },
+          "tree_desc": {
+            "en": "Small stdlib HTTP boundary for the Watch-to-cognitive voice path",
+            "es": "Pequeño límite HTTP de stdlib para la ruta de voz Watch-a-cognitivo",
+            "de": "Kleine stdlib-HTTP-Grenze für den Watch-zu-Cognitive-Sprachpfad",
+            "fr": "Petite frontière HTTP stdlib pour le chemin vocal Watch-vers-cognitif",
+            "it": "Piccolo confine HTTP stdlib per il percorso vocale Watch-a-cognitive",
+            "ja": "Watch→認知の音声経路のための小さなstdlib HTTP境界",
+            "zh": "面向 Watch→认知语音路径的小型 stdlib HTTP 边界",
+            "pt": "Pequena fronteira HTTP da biblioteca padrão para o caminho de voz do Watch ao nó cognitivo"
+          }
+        },
+        {
+          "name": "main.py",
+          "desc": {
+            "en": "Entry point +",
+            "es": "Punto de entrada + subcomandos reales",
+            "de": "Einstiegspunkt + echte Subcommands",
+            "fr": "Point d'entrée + sous-commandes réelles",
+            "it": "Punto di ingresso + sottocomandi reali",
+            "ja": "エントリポイント + 実際の `analyz",
+            "zh": "入口点 + 真实的 `analyze-aud",
+            "pt": "Ponto de entrada + subcomandos reais"
+          },
+          "tree_desc": {
+            "en": "Entry point + real `analyze-audio`/`parse-intent` subcommands",
+            "es": "Punto de entrada + subcomandos reales `analyze-audio`/`parse-intent`",
+            "de": "Einstiegspunkt + echte Subcommands `analyze-audio`/`parse-intent`",
+            "fr": "Point d'entrée + sous-commandes réelles `analyze-audio`/`parse-intent`",
+            "it": "Punto di ingresso + sottocomandi reali `analyze-audio`/`parse-intent`",
+            "ja": "エントリポイント + 実際の `analyze-audio`/`parse-intent` サブコマンド",
+            "zh": "入口点 + 真实的 `analyze-audio`/`parse-intent` 子命令",
+            "pt": "Ponto de entrada + subcomandos reais `analyze-audio`/`parse-intent`"
+          }
+        },
+        {
+          "name": "ratelimit.py",
+          "desc": {
+            "en": "A sliding-window limit of requests",
+            "es": "Un límite de peticiones por dirección de",
+            "de": "Ein Gleitfenster-Limit für Anfragen je",
+            "fr": "Une limite de requêtes par adresse client",
+            "it": "Un limite di richieste per indirizzo client",
+            "ja": "クライアントアドレスごとのスライディングウィ",
+            "zh": "按客户端地址的滑动窗口请求限制",
+            "pt": "Um limite de pedidos por endereço de"
+          },
+          "tree_desc": {
+            "en": "A sliding-window limit of requests per client address (so one client cannot fill the confirmation list)",
+            "es": "Un límite de peticiones por dirección de cliente en ventana deslizante (para que un cliente no llene la lista de confirmaciones)",
+            "de": "Ein Gleitfenster-Limit für Anfragen je Client-Adresse (damit ein Client die Bestätigungsliste nicht füllen kann)",
+            "fr": "Une limite de requêtes par adresse client en fenêtre glissante (pour qu'un client ne puisse pas remplir la liste des confirmations)",
+            "it": "Un limite di richieste per indirizzo client a finestra scorrevole (perché un client non riempia l'elenco delle conferme)",
+            "ja": "クライアントアドレスごとのスライディングウィンドウ式リクエスト制限 (1つのクライアントが確認リストを埋め尽くせないように)",
+            "zh": "按客户端地址的滑动窗口请求限制 (防止单个客户端填满确认列表)",
+            "pt": "Um limite de pedidos por endereço de cliente em janela deslizante (para que um cliente não encha a lista de confirmações)"
+          }
+        }
+      ],
+      "tree_head": {
+        "en": "source code",
+        "es": "código fuente",
+        "de": "Quellcode",
+        "fr": "code source",
+        "it": "codice sorgente",
+        "ja": "ソースコード",
+        "zh": "源代码",
+        "pt": "código-fonte"
+      },
+      "sub": {
+        "en": "source code",
+        "es": "código fuente",
+        "de": "Quellcode",
+        "fr": "code source",
+        "it": "codice sorgente",
+        "ja": "ソースコード",
+        "zh": "源代码",
+        "pt": "código-fonte"
+      }
+    },
+    {
+      "name": {
+        "en": "folders",
+        "es": "carpetas",
+        "de": "Ordner",
+        "fr": "dossiers",
+        "it": "cartelle",
+        "ja": "フォルダ",
+        "zh": "文件夹",
+        "pt": "pastas"
+      },
+      "kind": "group",
+      "span": 3,
+      "accent": "b",
+      "columns": 2,
+      "rows": [
+        {
+          "name": "tests/",
+          "desc": {
+            "en": "Real tests: WAV fixtures",
+            "es": "Tests reales: fixtures WAV",
+            "de": "Echte Tests: WAV-Fixtures",
+            "fr": "Tests réels : fixtures WAV",
+            "it": "Test reali: fixture WAV",
+            "ja": "実際のテスト：WAV フィクスチャ",
+            "zh": "真实测试：WAV 夹具、VAD、意图规则、g",
+            "pt": "Testes reais: fixtures WAV"
+          },
+          "tree_desc": {
+            "en": "Real tests: WAV fixtures, VAD, intent rules, gateway, end-to-end CLI",
+            "es": "Tests reales: fixtures WAV, VAD, reglas de intencion, gateway, CLI end-to-end",
+            "de": "Echte Tests: WAV-Fixtures, VAD, Intent-Regeln, Gateway, End-to-End-CLI",
+            "fr": "Tests réels : fixtures WAV, VAD, règles d'intention, gateway, CLI de bout en bout",
+            "it": "Test reali: fixture WAV, VAD, regole di intento, gateway, CLI end-to-end",
+            "ja": "実際のテスト：WAV フィクスチャ、VAD、意図ルール、gateway、エンドツーエンド CLI",
+            "zh": "真实测试：WAV 夹具、VAD、意图规则、gateway、端到端 CLI",
+            "pt": "Testes reais: fixtures WAV, VAD, regras de intenção, gateway, CLI de ponta a ponta"
+          }
+        },
+        {
+          "name": "docs/",
+          "desc": {
+            "en": "Documentation and command catalog",
+            "es": "Documentación y catálogo de comandos",
+            "de": "Dokumentation und Befehlskatalog",
+            "fr": "Documentation et catalogue de commandes",
+            "it": "Documentazione e catalogo dei comandi",
+            "ja": "ドキュメントとコマンドカタログ",
+            "zh": "文档与指令目录",
+            "pt": "Documentação e catálogo de comandos"
+          },
+          "tree_desc": {
+            "en": "Documentation and command catalog",
+            "es": "Documentación y catálogo de comandos",
+            "de": "Dokumentation und Befehlskatalog",
+            "fr": "Documentation et catalogue de commandes",
+            "it": "Documentazione e catalogo dei comandi",
+            "ja": "ドキュメントとコマンドカタログ",
+            "zh": "文档与指令目录",
+            "pt": "Documentação e catálogo de comandos"
+          }
+        },
+        {
+          "name": "images/",
+          "desc": {
+            "en": "Media and diagrams",
+            "es": "Medios y diagramas",
+            "de": "Medien und Diagramme",
+            "fr": "Médias et diagrammes",
+            "it": "Media e diagrammi",
+            "ja": "メディアと図表",
+            "zh": "媒体与图表",
+            "pt": "Multimédia e diagramas"
+          },
+          "tree_desc": {
+            "en": "Media and diagrams",
+            "es": "Medios y diagramas",
+            "de": "Medien und Diagramme",
+            "fr": "Médias et diagrammes",
+            "it": "Media e diagrammi",
+            "ja": "メディアと図表",
+            "zh": "媒体与图表",
+            "pt": "Multimédia e diagramas"
+          }
+        },
+        {
+          "name": "deploy/",
+          "desc": {
+            "en": "",
+            "es": "",
+            "de": "",
+            "fr": "",
+            "it": "",
+            "ja": "",
+            "zh": "",
+            "pt": ""
+          },
+          "tree_desc": {
+            "en": "",
+            "es": "",
+            "de": "",
+            "fr": "",
+            "it": "",
+            "ja": "",
+            "zh": "",
+            "pt": ""
+          }
+        },
+        {
+          "name": "systemd/",
+          "desc": {
+            "en": "service unit",
+            "es": "unidad de servicio",
+            "de": "Dienst-Unit",
+            "fr": "unité de service",
+            "it": "unità di servizio",
+            "ja": "サービスユニット",
+            "zh": "服务单元",
+            "pt": "unidade de serviço"
+          },
+          "tree_desc": {
+            "en": "service unit",
+            "es": "unidad de servicio",
+            "de": "Dienst-Unit",
+            "fr": "unité de service",
+            "it": "unità di servizio",
+            "ja": "サービスユニット",
+            "zh": "服务单元",
+            "pt": "unidade de serviço"
+          }
+        },
+        {
+          "name": "tools/",
+          "desc": {
+            "en": "project tools and CI checks",
+            "es": "herramientas del proyecto y comprobaciones",
+            "de": "Projektwerkzeuge und CI-Prüfungen",
+            "fr": "outils du projet et vérifications de la CI",
+            "it": "strumenti del progetto e controlli della CI",
+            "ja": "プロジェクトのツールと CI の検査",
+            "zh": "项目工具和 CI 检查",
+            "pt": "ferramentas do projeto e verificações da CI"
+          },
+          "tree_desc": {
+            "en": "project tools and CI checks",
+            "es": "herramientas del proyecto y comprobaciones del CI",
+            "de": "Projektwerkzeuge und CI-Prüfungen",
+            "fr": "outils du projet et vérifications de la CI",
+            "it": "strumenti del progetto e controlli della CI",
+            "ja": "プロジェクトのツールと CI の検査",
+            "zh": "项目工具和 CI 检查",
+            "pt": "ferramentas do projeto e verificações da CI"
+          }
+        },
+        {
+          "name": ".github/",
+          "desc": {
+            "en": "CI workflow and issue templates",
+            "es": "flujo de CI y plantillas de incidencias",
+            "de": "CI-Workflow und Issue-Vorlagen",
+            "fr": "workflow de CI et modèles de tickets",
+            "it": "workflow di CI e modelli di segnalazione",
+            "ja": "CI ワークフローと Issue テンプレート",
+            "zh": "CI 工作流和 Issue 模板",
+            "pt": "fluxo de CI e modelos de problemas"
+          }
+        }
+      ]
+    },
+    {
+      "name": {
+        "en": "project files",
+        "es": "ficheros del proyecto",
+        "de": "Projektdateien",
+        "fr": "fichiers du projet",
+        "it": "file del progetto",
+        "ja": "プロジェクトのファイル",
+        "zh": "项目文件",
+        "pt": "ficheiros do projeto"
+      },
+      "kind": "group",
+      "span": 3,
+      "accent": "c",
+      "columns": 2,
+      "rows": [
+        {
+          "name": "Dockerfile",
+          "desc": {
+            "en": "Minimal container image",
+            "es": "Imagen de contenedor mínima para el gateway",
+            "de": "Minimales Container-Image für das",
+            "fr": "Image de conteneur minimale pour la",
+            "it": "Immagine container minima per il gateway",
+            "ja": "認証付き HTTP ゲートウェイ用の最小コン",
+            "zh": "用于经认证 HTTP 网关的最小容器镜像",
+            "pt": "Imagem de contentor mínima para o gateway"
+          },
+          "tree_desc": {
+            "en": "Minimal container image for the authenticated HTTP gateway (non-root)",
+            "es": "Imagen de contenedor mínima para el gateway HTTP autenticado (sin root)",
+            "de": "Minimales Container-Image für das authentifizierte HTTP-Gateway (non-root)",
+            "fr": "Image de conteneur minimale pour la passerelle HTTP authentifiée (non-root)",
+            "it": "Immagine container minima per il gateway HTTP autenticato (non-root)",
+            "ja": "認証付き HTTP ゲートウェイ用の最小コンテナイメージ（非 root）",
+            "zh": "用于经认证 HTTP 网关的最小容器镜像（非 root）",
+            "pt": "Imagem de contentor mínima para o gateway HTTP autenticado (não root)"
+          }
+        },
+        {
+          "name": "pyproject.toml",
+          "desc": {
+            "en": "Package metadata",
+            "es": "Metadatos del paquete",
+            "de": "Paketmetadaten",
+            "fr": "Métadonnées du paquet",
+            "it": "Metadati del pacchetto",
+            "ja": "パッケージのメタデータ",
+            "zh": "包的元数据",
+            "pt": "Metadados do pacote"
+          },
+          "tree_desc": {
+            "en": "Package metadata (version raised only by the explicit bump command)",
+            "es": "Metadatos del paquete (versión con incremento cuentakilómetros)",
+            "de": "Paketmetadaten",
+            "fr": "Métadonnées du paquet (version à incrément type compteur kilométrique)",
+            "it": "Metadati del pacchetto (versione a incremento contachilometri)",
+            "ja": "パッケージのメタデータ",
+            "zh": "包的元数据",
+            "pt": "Metadados do pacote (versão subida só pelo comando bump explícito)"
+          }
+        },
+        {
+          "name": "bump_version.py",
+          "desc": {
+            "en": "explicit version bump",
+            "es": "Incremento de versión tipo cuentakilómetros",
+            "de": "ausdrückliche Versionserhöhung",
+            "fr": "Incrément de version type compteur",
+            "it": "Incremento di versione stile contachilometri",
+            "ja": "明示的なバージョン更新",
+            "zh": "显式提升版本",
+            "pt": "Subida de versão ao estilo conta-quilómetros"
+          },
+          "tree_desc": {
+            "en": "explicit version bump",
+            "es": "Incremento de versión tipo cuentakilómetros (solo lo ejecuta el comando `bump` explícito)",
+            "de": "ausdrückliche Versionserhöhung",
+            "fr": "Incrément de version type compteur kilométrique (exécuté seulement par la commande `bump` explicite)",
+            "it": "Incremento di versione stile contachilometri (eseguito solo dal comando `bump` esplicito)",
+            "ja": "明示的なバージョン更新",
+            "zh": "显式提升版本",
+            "pt": "Subida de versão ao estilo conta-quilómetros (executada só pelo comando `bump` explícito)"
+          }
+        },
+        {
+          "name": "bump_manifest_version.py",
+          "desc": {
+            "en": "Syncs hydra-umc.project.json's version",
+            "es": "Sincroniza la versión de",
+            "de": "Synchronisiert die Version von",
+            "fr": "Synchronise la version de",
+            "it": "Sincronizza la versione di",
+            "ja": "hydra-umc.project.json",
+            "zh": "将 hydra-umc.project.js",
+            "pt": "Sincroniza a versão do"
+          },
+          "tree_desc": {
+            "en": "Syncs hydra-umc.project.json's version to the native one (--sync)",
+            "es": "Sincroniza la versión de hydra-umc.project.json con la nativa (--sync)",
+            "de": "Synchronisiert die Version von hydra-umc.project.json mit der nativen (--sync)",
+            "fr": "Synchronise la version de hydra-umc.project.json avec la version native (--sync)",
+            "it": "Sincronizza la versione di hydra-umc.project.json con quella nativa (--sync)",
+            "ja": "hydra-umc.project.json のバージョンをネイティブ版と同期(--sync)",
+            "zh": "将 hydra-umc.project.json 的版本与原生版本同步(--sync)",
+            "pt": "Sincroniza a versão do hydra-umc.project.json com a nativa (--sync)"
+          }
+        },
+        {
+          "name": "build.sh / build.bat",
+          "desc": {
+            "en": "Create venv, install",
+            "es": "Crea el venv, instala",
+            "de": "Erstellt das venv, installiert",
+            "fr": "Crée le venv, installe",
+            "it": "Crea il venv, installa",
+            "ja": "venv 作成、インストール",
+            "zh": "创建 venv、安装（含 dev 附加依赖）",
+            "pt": "Cria o venv, instala"
+          },
+          "tree_desc": {
+            "en": "Create venv, install (with dev extras), verify import, run tests",
+            "es": "Crea el venv, instala (con extras de dev), verifica la importación, corre tests",
+            "de": "Erstellt das venv, installiert (mit Dev-Extras), prüft den Import, führt Tests aus",
+            "fr": "Crée le venv, installe (avec extras dev), vérifie l'import, exécute les tests",
+            "it": "Crea il venv, installa (con extra dev), verifica l'import, esegue i test",
+            "ja": "venv 作成、インストール（dev エクストラ付き）、インポート検証、テスト実行",
+            "zh": "创建 venv、安装（含 dev 附加依赖）、验证导入、运行测试",
+            "pt": "Cria o venv, instala (com extras de desenvolvimento), verifica a importação e executa os testes"
+          }
+        },
+        {
+          "name": "build-test.sh / build-test.bat",
+          "desc": {
+            "en": "Non-mutating wrapper for tools/build_test.py",
+            "es": "Envoltorio no-mutante para",
+            "de": "Nicht-mutierender Wrapper für",
+            "fr": "Wrapper non-mutant pour tools/build_test.py",
+            "it": "Wrapper non-mutante per tools/build_test.py",
+            "ja": "tools/build_test.py の非",
+            "zh": "tools/build_test.py 的非",
+            "pt": "Envólucro sem alterações de"
+          },
+          "tree_desc": {
+            "en": "Non-mutating wrapper for tools/build_test.py (no version/manifest/CHANGELOG changes)",
+            "es": "Envoltorio no-mutante para tools/build_test.py (no toca version/manifest/CHANGELOG)",
+            "de": "Nicht-mutierender Wrapper für tools/build_test.py (ändert weder Version noch Manifest noch CHANGELOG)",
+            "fr": "Wrapper non-mutant pour tools/build_test.py (ne touche pas à version/manifest/CHANGELOG)",
+            "it": "Wrapper non-mutante per tools/build_test.py (non tocca versione/manifest/CHANGELOG)",
+            "ja": "tools/build_test.py の非破壊ラッパー（バージョン/マニフェスト/CHANGELOGは変更しない）",
+            "zh": "tools/build_test.py 的非破坏性包装脚本（不改动版本号/manifest/CHANGELOG）",
+            "pt": "Envólucro sem alterações de tools/build_test.py (sem mudar versão/manifesto/CHANGELOG)"
+          }
+        },
+        {
+          "name": "run.sh / run.bat",
+          "desc": {
+            "en": "Run the entry point",
+            "es": "Ejecuta el punto de entrada",
+            "de": "Führt den Einstiegspunkt aus",
+            "fr": "Exécute le point d'entrée",
+            "it": "Esegue il punto di ingresso",
+            "ja": "エントリポイントを実行（引数を転送",
+            "zh": "运行入口点（转发参数，例如 `analyze",
+            "pt": "Executa o ponto de entrada"
+          },
+          "tree_desc": {
+            "en": "Run the entry point (forwards args, e.g. `analyze-audio`)",
+            "es": "Ejecuta el punto de entrada (reenvia argumentos, ej. `analyze-audio`)",
+            "de": "Führt den Einstiegspunkt aus (leitet Argumente weiter, z. B. `analyze-audio`)",
+            "fr": "Exécute le point d'entrée (transmet les arguments, ex. `analyze-audio`)",
+            "it": "Esegue il punto di ingresso (inoltra gli argomenti, es. `analyze-audio`)",
+            "ja": "エントリポイントを実行（引数を転送、例：`analyze-audio`）",
+            "zh": "运行入口点（转发参数，例如 `analyze-audio`）",
+            "pt": "Executa o ponto de entrada (reencaminha argumentos, p. ex. `analyze-audio`)"
+          }
+        },
+        {
+          "name": "CHANGELOG.md",
+          "desc": {
+            "en": "what changed in each version",
+            "es": "qué cambió en cada versión",
+            "de": "was sich in jeder Version geändert hat",
+            "fr": "ce qui a changé à chaque version",
+            "it": "cosa è cambiato in ogni versione",
+            "ja": "各バージョンの変更点",
+            "zh": "每个版本的变更",
+            "pt": "o que mudou em cada versão"
+          }
+        },
+        {
+          "name": "hydra-umc.project.json",
+          "desc": {
+            "en": "manifest: version, maturity, family",
+            "es": "manifiesto: versión, madurez, familia",
+            "de": "Manifest: Version, Reifegrad, Familie",
+            "fr": "manifeste : version, maturité, famille",
+            "it": "manifesto: versione, maturità, famiglia",
+            "ja": "マニフェスト：バージョン、成熟度、ファミリー",
+            "zh": "清单：版本、成熟度、系列",
+            "pt": "manifesto: versão, maturidade, família"
+          }
+        },
+        {
+          "name": "test.sh",
+          "desc": {
+            "en": "runs the tests",
+            "es": "ejecuta las pruebas",
+            "de": "führt die Tests aus",
+            "fr": "lance les tests",
+            "it": "esegue i test",
+            "ja": "テストを実行",
+            "zh": "运行测试",
+            "pt": "executa os testes"
+          }
+        }
+      ]
+    }
+  ]
+}

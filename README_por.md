@@ -1,3 +1,9 @@
+<!-- =============================================================================
+HYDRA-UMC-VOICE-UI - Local speech-to-action front end
+Copyright (C) JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
+GPL-3.0-or-later - see LICENSE
+============================================================================= -->
+
 <p align="center">
   <img src="images/HYDRA_UMC_BANNER.svg" alt="HYDRA-UMC-VOICE-UI banner" width="100%">
 </p>
@@ -9,16 +15,19 @@
 ### 🔊 Pipeline local de voz para ação, acelerado por hardware
 
 <p align="center">
-  <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
+  <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/STT-Whisper%20Local-FF6F00.svg" alt="STT">
-  <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Hailo-10">
+  <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Platform">
+  <img src="https://img.shields.io/badge/Tests-195%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Version-0.1.8-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
-
-**Verificação de honestidade - o que realmente funciona hoje:** o carregamento de WAV e a deteção de atividade de voz por limiar de energia (`audio.py`), o analisador de intenções/entidades baseado em regras e o seu `classify_intent()` sensível a ambiguidades (`intent.py`), o gateway de texto para intenção, limitado e condicionado por confirmação, com uma janela de validade de confirmação real e limitada (`gateway.py` - um `confirmationToken` autodescritivo, assinado com HMAC e de utilização única, nomeia a intenção/entidades exatas para que foi emitido, pelo que uma confirmação tardia/repetida nunca pode autorizar uma ação entretanto desatualizada, nem para lá da sua própria expiração real), e a fronteira HTTP autenticada para o relé do Watch, incluindo o `POST /v1/voice/confirm` (`http_service.py`) são reais e testados - 169 testes a passar (`pytest tests/`), incluindo uma suíte real de ponta a ponta contra um `VoiceGatewayServer` em direto (token exigido/aceite/recusado, uma ida e volta real de `POST /v1/voice/turn`/`POST /v1/voice/confirm`, corpos malformados/demasiado grandes, um `Content-Length` genuinamente em falta). Nada disto precisa de um microfone, de um modelo Whisper nem de um NPU Hailo-10 para ser executado ou testado - `analyze-audio`/`parse-intent`/`serve` funcionam todos hoje sobre um ficheiro WAV ou texto já transcrito. O novo `Dockerfile` reutiliza as mesmas flags da CLI já verificadas em direto na unidade systemd da CM5 real, mas não foi ele próprio testado numa compilação - não há runtime Docker nesta máquina de desenvolvimento. O pipeline real de STT Whisper e TTS neuronal que o roteiro deste README descreve continua a ser pura aspiração: não foi integrado nenhum modelo de reconhecimento nem de síntese de fala, e este ambiente não tem nenhum módulo Hailo-10 físico onde correr um. Consulte o `CHANGELOG.md` para saber exatamente o que já foi entregue e a própria lista de funcionalidades da secção 1 abaixo para a distinção real/futuro de cada uma.
 
 ---
 
 > **Estado de segurança (safety e security):** este ecossistema não é um sistema de segurança certificado. Ainda não existe um caminho de E-STOP por hardware, nem limites ou interlocks impostos pelo firmware, nem um comando de movimento verificado; as imagens de firmware são verificadas com CRC32 e um HMAC-SHA256 de chave partilhada, não com uma assinatura assimétrica; TLS e TLS mútuo são opcionais e estão desativados por defeito; nenhuma placa própria foi ainda montada ou testada. Leia a [base de segurança](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/SECURITY_BASELINE.md) e o [modelo de ameaças](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/THREAT_MODEL.md) antes de confiar em qualquer afirmação aqui para a segurança de uma pessoa.
+
+---
 
 ## 📋 Num relance
 
@@ -26,10 +35,12 @@
 |---|---|
 | Versão | `0.1.8` |
 | Maturidade | Funcional |
-| Testes | 85 (`pytest tests/`) |
+| Testes | 195 (`python -m pytest -q tests`) |
 | Tecnologia | Python / Rule-based intent parser / Energy-gate VAD |
 | Destino | O Raspberry Pi CM5 de uma célula HYDRA-UMC |
 | Em hardware real | Ainda não: não há registo de execução em hardware real para esta versão |
+
+**Ir para:** [Visão geral](#-visão-geral) · [Arquitetura](#-arquitetura) · [Início rápido](#-início-rápido) · [Testes](#-testes) · [Estrutura do repositório](#-estrutura-do-repositório) · [Projetos relacionados](#-projetos-relacionados)
 
 ## 🚦 Estado do projeto
 
@@ -40,11 +51,11 @@ Cada linha é uma parte deste repositório e a luz diz até onde chega hoje. É 
 | Área | Estado | O que significa aqui |
 |---|---|---|
 | Software | 🟡 | Funciona para o seu propósito principal; a verificação de honestidade acima lista o que ainda falta |
-| Testes | 🟢 | 85 testes automáticos, executados a cada alteração |
+| Testes | 🟢 | 195 testes automáticos, executados a cada alteração |
 | Hardware real | 🔴 | Ainda não: não há registo de execução em hardware real para esta versão |
 | Documentação | 🟢 | README em oito idiomas, verificado contra o manifesto a cada alteração |
 
-## 1. 🛠️ VISÃO TÉCNICA GERAL
+## 🎯 Visão geral
 
 O **HYDRA-UMC-VOICE-UI** é a camada local de interação por voz do ecossistema HYDRA-UMC. Fornece um pipeline de alto desempenho de STT (Speech-to-Text) e TTS (Text-to-Speech) acelerado pelo NPU Hailo-10.
 
@@ -65,11 +76,19 @@ Permite aos operadores controlar missões robóticas, consultar o estado do sist
   sob o [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE)
   (ao lado do VLA-Engine, Semantic-Planner e Docs-QA), partilhando a imagem
   HydraOS e os pesos de modelo do pai em vez de manter cópias próprias.
-* 📦 **Versionamento em odómetro:** A versão do `pyproject.toml` só é subida pelo comando `bump` explícito (`python tools/hydra_project_tool.py bump`, que executa o `bump_version.py`) - compilar nunca a altera.
 
----
+## 🧩 Papel no HYDRA-UMC
 
-## 2. 🔄 FLUXO DO PIPELINE DE VOZ
+O **HYDRA-UMC-VOICE-UI** é a entrada de voz do nó cognitivo: deteta voz num ficheiro WAV, analisa com regras um texto já reconhecido para obter uma intenção e oferece um gateway HTTP limitado para o fluxo do relógio, que pede uma confirmação antes de passar o que quer que seja. Ainda não reconhece fala e nunca envia um comando físico.
+
+## 🏛️ Arquitetura
+
+<p align="center">
+  <img src="images/architecture.svg" alt="HYDRA-UMC-VOICE-UI architecture" width="100%">
+</p>
+
+<details>
+<summary>Versão em texto do diagrama (Mermaid)</summary>
 
 ```mermaid
 flowchart LR
@@ -80,9 +99,9 @@ flowchart LR
     TTS --> SPK["Speaker Output"]
 ```
 
----
+</details>
 
-## 3. 🧱 ARQUITETURA E DECISÕES DE DESIGN
+### ARQUITETURA E DECISÕES DE DESIGN
 
 Este repositório é um **filho** da família Cognitive AI Node - o seu pai, o [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE), é dono da imagem HydraOS partilhada e dos pesos de modelo quantizados, e liga este serviço ao `docker-compose.yml` ao lado dos seus três irmãos (VLA-Engine, Semantic-Planner, Docs-QA):
 
@@ -96,48 +115,41 @@ Este repositório é um **filho** da família Cognitive AI Node - o seu pai, o [
 * **Porque é que o gateway do Watch usa o `classify_intent()` e não o `parse_intent()` legado.** O `parse_intent()` continua a ser de primeira correspondência ganha (inalterado, ainda testado tal como está) para os chamadores existentes, mas uma transcrição real que corresponda genuinamente a mais de um comando conhecido (por exemplo, contendo «stop» e «status») é uma ambiguidade real e relevante para a segurança num gateway cuja função inteira é decidir se um comando de movimento precisa de confirmação - o `classify_intent()` verifica todas as regras e reporta um caso ambíguo real e distinto, em vez de resolver em silêncio para qualquer regra que esteja declarada primeiro.
 * **Porque é que o `normalize_text()` aplica Unicode NFKC antes de comparar.** Alguns pipelines de reconhecimento de fala emitem letras latinas de largura total e outras formas Unicode de compatibilidade - pontos de código distintos do ASCII normal e, portanto, não «a palavra» no que toca a uma regex `\b...\b`. O NFKC reduz-os primeiro ao seu equivalente normal, para que um comando semanticamente idêntico a uma regra conhecida nunca seja tratado como uma falha honesta só por causa da forma como foi codificado.
 
----
+### GATEWAY DE VOZ DO WATCH (v0)
 
-## 📂 ESTRUTURA DE DIRETORIAS
+O `python -m hydra_umc_voice_ui.main serve` expõe um gateway HTTP local deliberadamente limitado para uma integração com o HYDRA-UMC-WATCH emparelhado: `GET /health`, `POST /v1/voice/turn` e `POST /v1/voice/confirm`. O gateway valida o payload tipado `voice_turn`, usa o analisador de intenções determinista existente e devolve um `assistant_reply`; não controla hardware de robôs.
 
-```text
-HYDRA-UMC-VOICE-UI/
-├── src/hydra_umc_voice_ui/
-│   ├── __init__.py            # Descrição e versão do pacote
-│   ├── audio.py               # Carregamento real de WAV + deteção de atividade de voz por limiar de energia
-│   ├── intent.py               # Analisador real de intenções/entidades por regras + classify_intent() sensível a ambiguidades
-│   ├── gateway.py               # Gateway limitado de texto para intenção partilhado pelo fluxo cognitivo do Watch
-│   ├── http_service.py          # Pequena fronteira HTTP da biblioteca padrão para o caminho de voz do Watch ao nó cognitivo
-│   ├── main.py                  # Ponto de entrada + subcomandos reais `analyze-audio`/`parse-intent`
-│   └── ratelimit.py             # Um limite de pedidos por endereço de cliente em janela deslizante (para que um cliente não encha a lista de confirmações)
-├── tests/                    # Testes reais: fixtures WAV, VAD, regras de intenção, gateway, CLI de ponta a ponta
-├── docs/                     # Documentação e catálogo de comandos
-├── images/                   # Multimédia e diagramas
-├── deploy/
-│   └── voice-ui.env.example  # Modelo de ambiente do gateway local da CM5
-├── systemd/
-│   └── hydra-umc-voice-ui.service # Unidade systemd do serviço HTTP de voz local da CM5
-├── tools/
-│   ├── build_test.py         # Verificação de compilação sem alterar versões
-│   ├── ci_validate.py        # Validação de manifesto/CHANGELOG/docs usada pelo CI
-│   ├── _doc_policy.py        # Regras de documentação partilhadas pela família (cópia da de HYDRA-UMC-SDK, mantida em sincronia)
-│   ├── _readme_parity.py     # Verificação de que os oito README partilham a mesma estrutura (cópia da de HYDRA-UMC-SDK, mantida em sincronia)
-│   └── hydra_project_tool.py # Os mesmos comandos em todos os repositórios: validate, test, ci, version, status, bump
-├── build/                    # Saída de compilação local (ignorada pelo git)
-├── Dockerfile                # Imagem de contentor mínima para o gateway HTTP autenticado (não root)
-├── pyproject.toml            # Metadados do pacote (versão subida só pelo comando bump explícito)
-├── bump_version.py           # Subida de versão ao estilo conta-quilómetros (executada só pelo comando `bump` explícito)
-├── bump_manifest_version.py  # Sincroniza a versão do hydra-umc.project.json com a nativa (--sync)
-├── build.sh / build.bat      # Cria o venv, instala (com extras de desenvolvimento), verifica a importação e executa os testes
-├── build-test.sh / build-test.bat # Envólucro sem alterações de tools/build_test.py (sem mudar versão/manifesto/CHANGELOG)
-└── run.sh / run.bat          # Executa o ponto de entrada (reencaminha argumentos, p. ex. `analyze-audio`)
+O desenvolvimento em loopback pode correr sem token. Um bind que não seja loopback exige `HYDRA_UMC_VOICE_UI_TOKEN` e um cabeçalho `Authorization: Bearer` correspondente. O áudio bruto nunca é enviado por esta API, e as intenções relacionadas com movimento devolvem sempre `requiresConfirmation: true` juntamente com um `confirmationToken` real e limitado - o cliente Watch devolve-o ao `POST /v1/voice/confirm`, que reporta `confirmed`/`expired`/`invalid` (nunca um booleano simples) sem despachar nada por si próprio. Consulte a secção de confirmação do [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) abaixo para o contrato completo.
+
+Uma transcrição que corresponda genuinamente a mais de um comando conhecido é rejeitada com uma resposta real e distinta em vez de ser resolvida em silêncio para uma interpretação:
+
+```json
+// POST /v1/voice/turn
+{"type": "voice_turn", "requestId": "watch-voice-001", "transcript": "stop the status check", "locale": "en-US"}
+
+// -> {"type":"assistant_reply","requestId":"watch-voice-001","text":"That request matched more than one action (status, stop). Please rephrase it more specifically.","level":"ATTENTION","speak":true,"requiresConfirmation":false,"visualState":"clarification","interpretation":{"heardText":"stop the status check","normalizedText":"stop the status check","matchedRules":["status","stop"]}}
 ```
 
-> **Nota:** `hardware/` e `firmware/` foram retirados - este nó corre numa CM5 + módulo M.2 Hailo-10 já existentes, sem desenho de hardware/firmware próprio. `os/` e `models/` também foram retirados - a imagem HydraOS e os pesos de modelo Hailo-10 partilhados vivem no pai `HYDRA-UMC-COGNITIVE-NODE`, a que este projeto se liga como serviço (ver o seu `docker-compose.yml`).
+Consulte o [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) para o contrato completo dos pedidos e a fronteira de implantação, e o [CLI_REFERENCE.md](docs/CLI_REFERENCE.md) para cada exemplo real de `analyze-audio`/`parse-intent`/`serve` capturado da CLI instalada.
 
----
+## 🚀 Início rápido
 
-## ⚙️ GUIA DE COMPILAÇÃO E EXECUÇÃO
+Requer Python 3.10 ou superior.
+
+```bash
+./build.sh  # Linux, macOS (build.bat on Windows)
+./run.sh analyze-audio clip.wav
+./run.sh parse-intent "stop robot one"
+./run.sh serve --port 8091
+```
+
+## 🧪 Testes
+
+195 testes automáticos correm com `python -m pytest -q tests`. Não precisam de hardware nem de nada fora desta máquina.
+
+A CI executa `HYDRA_UMC_CI=1 python tools/ci_validate.py`, que verifica o manifesto, os documentos, os oito README e as imagens.
+
+## 🏗️ Compilação e publicação
 
 Requer Python >= 3.10.
 
@@ -176,32 +188,58 @@ run.bat parse-intent "status of robot 3"
 * **O `pip install -e .` falha.** Normalmente é um `.venv/` obsoleto. Apague a pasta `.venv/` e volte a executar `./build.sh`/`build.bat` para a recriar.
 * **O `import OK` nunca aparece.** Significa que o próprio `python -c "import hydra_umc_voice_ui"` falhou - volte a executar com o venv ativo para ver o traceback real.
 
----
+## 📂 Estrutura do repositório
 
-## 🎙️ GATEWAY DE VOZ DO WATCH (v0)
+<p align="center">
+  <img src="images/repository-structure.svg" alt="Repository structure of HYDRA-UMC-VOICE-UI" width="100%">
+</p>
 
-O `python -m hydra_umc_voice_ui.main serve` expõe um gateway HTTP local deliberadamente limitado para uma integração com o HYDRA-UMC-WATCH emparelhado: `GET /health`, `POST /v1/voice/turn` e `POST /v1/voice/confirm`. O gateway valida o payload tipado `voice_turn`, usa o analisador de intenções determinista existente e devolve um `assistant_reply`; não controla hardware de robôs.
+<details>
+<summary>Versão em texto da árvore</summary>
 
-O desenvolvimento em loopback pode correr sem token. Um bind que não seja loopback exige `HYDRA_UMC_VOICE_UI_TOKEN` e um cabeçalho `Authorization: Bearer` correspondente. O áudio bruto nunca é enviado por esta API, e as intenções relacionadas com movimento devolvem sempre `requiresConfirmation: true` juntamente com um `confirmationToken` real e limitado - o cliente Watch devolve-o ao `POST /v1/voice/confirm`, que reporta `confirmed`/`expired`/`invalid` (nunca um booleano simples) sem despachar nada por si próprio. Consulte a secção de confirmação do [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) abaixo para o contrato completo.
-
-Uma transcrição que corresponda genuinamente a mais de um comando conhecido é rejeitada com uma resposta real e distinta em vez de ser resolvida em silêncio para uma interpretação:
-
-```json
-// POST /v1/voice/turn
-{"type": "voice_turn", "requestId": "watch-voice-001", "transcript": "stop the status check", "locale": "en-US"}
-
-// -> {"type":"assistant_reply","requestId":"watch-voice-001","text":"That request matched more than one action (status, stop). Please rephrase it more specifically.","level":"ATTENTION","speak":true,"requiresConfirmation":false,"visualState":"clarification","interpretation":{"heardText":"stop the status check","normalizedText":"stop the status check","matchedRules":["status","stop"]}}
+```text
+HYDRA-UMC-VOICE-UI/
+├── src/hydra_umc_voice_ui/          código-fonte
+│   ├── __init__.py                  Descrição e versão do pacote
+│   ├── audio.py                     Carregamento real de WAV + deteção de atividade de voz por limiar de energia
+│   ├── intent.py                    Analisador real de intenções/entidades por regras + classify_intent() sensível a ambiguidades
+│   ├── gateway.py                   Gateway limitado de texto para intenção partilhado pelo fluxo cognitivo do Watch
+│   ├── http_service.py              Pequena fronteira HTTP da biblioteca padrão para o caminho de voz do Watch ao nó cognitivo
+│   ├── main.py                      Ponto de entrada + subcomandos reais `analyze-audio`/`parse-intent`
+│   └── ratelimit.py                 Um limite de pedidos por endereço de cliente em janela deslizante (para que um cliente não encha a lista de confirmações)
+├── tests/                           Testes reais: fixtures WAV, VAD, regras de intenção, gateway, CLI de ponta a ponta
+├── docs/                            Documentação e catálogo de comandos
+├── images/                          Multimédia e diagramas
+├── deploy/
+├── systemd/                         unidade de serviço
+├── tools/                           ferramentas do projeto e verificações da CI
+├── .github/                         fluxo de CI e modelos de problemas
+├── Dockerfile                       Imagem de contentor mínima para o gateway HTTP autenticado (não root)
+├── pyproject.toml                   Metadados do pacote (versão subida só pelo comando bump explícito)
+├── bump_version.py                  Subida de versão ao estilo conta-quilómetros (executada só pelo comando `bump` explícito)
+├── bump_manifest_version.py         Sincroniza a versão do hydra-umc.project.json com a nativa (--sync)
+├── build.sh / build.bat             Cria o venv, instala (com extras de desenvolvimento), verifica a importação e executa os testes
+├── build-test.sh / build-test.bat   Envólucro sem alterações de tools/build_test.py (sem mudar versão/manifesto/CHANGELOG)
+├── run.sh / run.bat                 Executa o ponto de entrada (reencaminha argumentos, p. ex. `analyze-audio`)
+├── CHANGELOG.md                     o que mudou em cada versão
+├── hydra-umc.project.json           manifesto: versão, maturidade, família
+└── test.sh                          executa os testes
 ```
 
-Consulte o [WATCH_VOICE_GATEWAY.md](docs/WATCH_VOICE_GATEWAY.md) para o contrato completo dos pedidos e a fronteira de implantação, e o [CLI_REFERENCE.md](docs/CLI_REFERENCE.md) para cada exemplo real de `analyze-audio`/`parse-intent`/`serve` capturado da CLI instalada.
+</details>
 
-## 🚀 ROTEIRO
+## 🗺️ Roteiro e limites conhecidos
+
+**Limites conhecidos hoje**
+
 * **Fase 1:** Implantação do motor VLA e processamento de entrada multimodal no Hailo-10.
 * **Fase 2:** Integração do planeador semântico com modelos comportamentais do enxame e memória de longo prazo.
 * **Fase 3:** Execução local de baixa latência do Voice UI e cancelamento de ruído industrial.
 * **Fase 4:** Suporte multilingue (inglês, espanhol, alemão, francês) e integração total com o Dashboard AI.
 
----
+## 🌍 Idiomas
+
+Este README e os documentos do repositório existem em oito idiomas: inglês, espanhol, alemão, francês, italiano, japonês, chinês e português (Portugal). São escritos em conjunto e a CI verifica que os oito ficheiros têm as mesmas secções e as mesmas ligações. Este repositório não tem ecrã nem catálogo de mensagens próprios, por isso não há textos de interface para traduzir.
 
 ## 🔗 Projetos relacionados
 
@@ -294,21 +332,26 @@ Este projeto faz parte do ecossistema de robótica HYDRA-UMC do mesmo autor (Jua
 - **[HYDRA-UMC-OPS-AGENT](https://github.com/JuanenRac/HYDRA-UMC-OPS-AGENT)** — coordenador de incidentes de manutenção: um papel de borda de poucos privilégios recolhe um inventário/estado higienizado, um papel de plano de controlo mostra-o só de leitura e pede a um fornecedor de IA que sugira um diagnóstico; nunca aplica um patch nem implanta nada.
 - **[HYDRA-UMC-DEV-SERVER](https://github.com/JuanenRac/HYDRA-UMC-DEV-SERVER)** — anfitrião de desenvolvimento reproduzível (Raspberry Pi 5 / CM5) que guarda o código-fonte do ecossistema e executa tarefas limitadas de compilação/teste numa fila durável; um papel de desenvolvimento dedicado, explicitamente não um CM5 operacional.
 
----
+## 📚 Documentação
 
-## 📚 Documentação e comunidade
+Onde ler mais:
 
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** — pilha tecnológica e diretrizes de código para um pull request.
-- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** — as normas de comportamento esperadas nesta comunidade.
-- **[SECURITY.md](SECURITY.md)** — como comunicar uma vulnerabilidade e as áreas de segurança em que este projeto se concentra.
-- **[SUPPORT.md](SUPPORT.md)** — onde fazer perguntas e comunicar erros.
-- **[LICENSE.md](LICENSE.md)** — a licença deste projeto.
+* [Base de segurança do ecossistema](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/SECURITY_BASELINE.md)
+* [Modelo de ameaças do ecossistema](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/THREAT_MODEL.md)
+* [Registo de alterações deste repositório](CHANGELOG.md)
+* [Licença deste repositório](LICENSE.md)
+
+## 🤝 Contribuir e comunidade
+
+* Antes de um pull request execute `HYDRA_UMC_CI=1 py -3 tools/ci_validate.py` (ou `HYDRA_UMC_CI=1 python3 tools/ci_validate.py`): tem de imprimir `CI_VALIDATION=PASS`. Não execute `build.sh` nem `build.bat` para esta verificação; compilar não é verificar.
+* Os oito README são escritos a partir de uma única fonte em HYDRA-UMC-DOCS; não os edite à mão. Altere a fonte e escreva-os de novo com `tools/make_readmes.py`.
+* Não afirme num README o que não foi executado: diga «simulado» ou «não testado em hardware» quando for a verdade.
+* Consulte [CONTRIBUTING.md](CONTRIBUTING.md), o [código de conduta](CODE_OF_CONDUCT.md), [SECURITY.md](SECURITY.md) e [SUPPORT.md](SUPPORT.md).
 
 ## 👤 AUTOR
-**JuanenRac** (Electro Hobby 3D)
-📧 electrohobby3d@gmail.com
-📺 [youtube.com/@electrohobby3d](https://youtube.com/@electrohobby3d)
+
+**JuanenRac (Electro Hobby 3D)** · electrohobby3d@gmail.com
 
 ## 📜 LICENÇA
-GPL-3.0 - consulte LICENSE para mais detalhes.
 
+GPL-3.0-or-later - [LICENSE](LICENSE).
