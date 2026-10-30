@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 import re
 
+from .messages import language_of, message
 from .intent import (
     INTENT_GO_HOME,
     INTENT_START_MISSION,
@@ -377,6 +378,11 @@ class AssistantReply:
     # after normalization, and the name of every rule that matched. Present
     # on every reply produced by process_voice_turn().
     interpretation: dict[str, object] | None = None
+    # The code of the sentence in `text` and its parameters, and the language the text was made in, so that a client can
+    # also compose the sentence itself (messages.py has the eight languages).
+    message_code: str | None = None
+    message_params: dict[str, str] | None = None
+    text_language: str | None = None
 
     @property
     def visual_state(self) -> str:
@@ -402,6 +408,10 @@ class AssistantReply:
         }
         if self.priority is not None:
             payload["priority"] = self.priority
+        if self.message_code is not None:
+            payload["messageCode"] = self.message_code
+            payload["messageParams"] = dict(self.message_params or {})
+            payload["textLanguage"] = self.text_language
         if self.intent is not None:
             payload["intent"] = {"name": self.intent.name, "entities": self.intent.entities}
         if self.interpretation is not None:
@@ -466,6 +476,17 @@ def process_voice_turn(
             min_confidence = min_confidence_default()
     now = now if now is not None else datetime.now(timezone.utc)
     classification = classify_intent(turn.transcript)
+    language = language_of(turn.locale)
+
+    def said(code: str, **parameters: str) -> dict[str, object]:
+        """The text of the reply in the language of the turn, and the code that names it."""
+        return {
+            "text": message(code, turn.locale, **parameters),
+            "message_code": code,
+            "message_params": {key: str(value) for key, value in parameters.items()},
+            "text_language": language,
+        }
+
     interpretation: dict[str, object] = {}
     if include_heard_text:
         interpretation["heardText"] = turn.transcript
@@ -474,7 +495,7 @@ def process_voice_turn(
     if classification.negated:
         return AssistantReply(
             request_id=turn.request_id,
-            text="That request contains a negation, so no action was taken. Please say what you want done, without \"not\" or \"never\".",
+            **said("negation"),
             level="ATTENTION",
             speak=True,
             requires_confirmation=False,
@@ -484,7 +505,7 @@ def process_voice_turn(
     if classification.is_no_match:
         return AssistantReply(
             request_id=turn.request_id,
-            text="I did not understand that safely. Ask for status, start a mission, stop, or go home.",
+            **said("no_match"),
             level="ATTENTION",
             speak=True,
             requires_confirmation=False,
@@ -495,7 +516,7 @@ def process_voice_turn(
         names = ", ".join(sorted({match.name for match in classification.matches}))
         return AssistantReply(
             request_id=turn.request_id,
-            text=f"That request matched more than one action ({names}). Please rephrase it more specifically.",
+            **said("ambiguous", names=names),
             level="ATTENTION",
             speak=True,
             requires_confirmation=False,
@@ -506,10 +527,10 @@ def process_voice_turn(
 
     if intent.name == INTENT_STATUS and not risk.requires_confirmation(INTENT_STATUS):
         robot = intent.entities.get("robot_id")
-        target = f" for robot {robot}" if robot else ""
+        target = message("status_target", turn.locale, robot=robot) if robot else ""
         return AssistantReply(
             request_id=turn.request_id,
-            text=f"Status request{target} understood. Live telemetry will be supplied by the authenticated HYDRA-UMC gateway.",
+            **said("status", target=target),
             level="ATTENTION",
             speak=True,
             requires_confirmation=False,
@@ -520,7 +541,7 @@ def process_voice_turn(
     if intent.name in (INTENT_START_MISSION, INTENT_GO_HOME) and turn.confidence is not None and turn.confidence < min_confidence:
         return AssistantReply(
             request_id=turn.request_id,
-            text="I am not sure I heard that correctly, so nothing was started. Please say it again.",
+            **said("not_sure"),
             level="ATTENTION",
             speak=True,
             requires_confirmation=False,
@@ -529,18 +550,18 @@ def process_voice_turn(
         )
 
     if intent.name == INTENT_START_MISSION:
-        mission = intent.entities.get("mission_id", "the requested mission")
-        text = f"Start request for {mission} understood. No motion is executed until an authenticated primary control confirms it."
+        mission = intent.entities.get("mission_id") or message("default_mission", turn.locale)
+        spoken = said("start_mission", mission=mission)
     elif intent.name == INTENT_GO_HOME:
-        text = "Go-home request understood. No motion is executed until an authenticated primary control confirms it."
+        spoken = said("go_home")
     elif intent.name == INTENT_STATUS:
-        text = "Status request understood. It is held until it is confirmed."
+        spoken = said("status_held")
     elif intent.name == INTENT_STOP:
         if not risk.requires_confirmation(INTENT_STOP):
             # Not held back: a stop that waits for a second answer can arrive too late.
             return AssistantReply(
                 request_id=turn.request_id,
-                text="Stop request understood and sent without waiting for a confirmation. The physical E-STOP remains the immediate safety action.",
+                **said("stop_now"),
                 level="WARNING",
                 speak=True,
                 requires_confirmation=False,
@@ -548,13 +569,13 @@ def process_voice_turn(
                 priority="safety-stop",
                 interpretation=interpretation,
             )
-        text = "Stop request understood. Use the physical E-STOP or authenticated primary control for immediate safety action."
+        spoken = said("stop_confirm")
     else:  # Defensive: parse_intent may gain a new rule before this policy does.
-        text = "The request was recognized but needs an updated safety policy before it can be handled."
+        spoken = said("needs_policy")
 
     return AssistantReply(
         request_id=turn.request_id,
-        text=text,
+        **spoken,
         level="WARNING" if intent.name == INTENT_STOP else "ATTENTION",
         speak=True,
         requires_confirmation=True,

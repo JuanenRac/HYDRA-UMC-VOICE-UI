@@ -52,7 +52,11 @@ configured:
 The response is an `assistant_reply` compatible with the Watch protocol. Its
 additive `visualState` is a bounded UI hint (`acknowledged`, `clarification`,
 `confirmation-required` or `warning`) for the Watch display; it is not a live
-robot-health or motion-state claim. A recognised motion request is labelled
+robot-health or motion-state claim. The `text` is made in the language of the
+`locale` of the request (English, Spanish, German, French, Italian, Japanese,
+Chinese or Portuguese; any other locale gets English); the reply also carries
+`messageCode`, `messageParams` and `textLanguage`, so a client can compose the
+sentence itself in its own language. A recognised motion request is labelled
 `requiresConfirmation: true`; this v0 service does not dispatch robot commands.
 
 ### Confirming a motion request

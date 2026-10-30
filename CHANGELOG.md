@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **Replies are made in the language of the client:** the text of every reply is composed in English, Spanish, German, French, Italian, Japanese, Chinese or Portuguese according to the `locale` of the voice turn (any other locale gets English). The reply also carries `messageCode`, `messageParams` and `textLanguage`, so that a client can compose the sentence itself. The sentences of the eight languages live in `messages.py`.
+
 - **The risk level of each spoken action is read from a file:** a status request is informative and a stop is answered at once, while starting a mission and going home are movements that always need a confirmation (the restrictive default). `HYDRA_UMC_VOICE_UI_RISK_FILE` (default `/etc/hydra-umc/voice-ui-risk.json`) names a table that can only make this stricter, for example asking to confirm a status request or a stop; an entry that lowers an action, an unknown name and a broken file are ignored and the default stays. The older `HYDRA_UMC_VOICE_UI_STOP_REQUIRES_CONFIRMATION` still raises the stop. Example in `deploy/voice-ui-risk.json.example`.
 
 ## [0.1.9] - Block by block voice detection, a minimum confidence and the transcript set by the server, and the universal README
