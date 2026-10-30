@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.1.9] - Block by block voice detection, a minimum confidence and the transcript set by the server, and the universal README
+
 - **Voice activity detection can run block by block:** `StreamingVad` takes samples of any block size and gives back each voice segment as soon as it ends (the same segments as the whole-clip detector for a fixed gate, tested with block sizes from one sample to the whole clip, mono and stereo); `analyze-audio --stream` reads a file one block at a time so its memory does not grow with the recording. With a noise-relative gate the floor is a running estimate. Tested; not run on a live microphone.
 - **README in the universal layout:** the README and its seven translations follow the layout that the four families share (22 sections in a fixed order), with an architecture picture and a repository-structure picture drawn from `docs/architecture.json` and `docs/structure.json`; the CI validator checks both pictures and the file tree.
 
