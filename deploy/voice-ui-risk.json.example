@@ -1,0 +1,8 @@
+{
+  "levels": {
+    "status": "informative",
+    "stop": "stop",
+    "start_mission": "movement",
+    "go_home": "movement"
+  }
+}

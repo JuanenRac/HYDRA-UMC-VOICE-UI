@@ -18,7 +18,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/STT-Whisper%20Local-FF6F00.svg" alt="STT">
   <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/Tests-195%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-239%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.1.9-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
@@ -35,7 +35,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | 版本 | `0.1.9` |
 | 成熟度 | 可用 |
-| 测试 | 195 (`python -m pytest -q tests`) |
+| 测试 | 239 (`python -m pytest -q tests`) |
 | 技术栈 | Python / Rule-based intent parser / Energy-gate VAD |
 | 目标 | HYDRA-UMC 工作单元的 Raspberry Pi CM5 |
 | 真实硬件 | 尚未：此版本没有在真实硬件上运行的记录 |
@@ -51,7 +51,7 @@ GPL-3.0-or-later - see LICENSE
 | 领域 | 状态 | 在这里的含义 |
 |---|---|---|
 | 软件 | 🟡 | 主要用途可用；上面的诚实性检查列出了仍然缺少的内容 |
-| 测试 | 🟢 | 195 项自动测试，每次变更都会运行 |
+| 测试 | 🟢 | 239 项自动测试，每次变更都会运行 |
 | 真实硬件 | 🔴 | 尚未：此版本没有在真实硬件上运行的记录 |
 | 文档 | 🟢 | 八种语言的 README，每次变更都会与清单核对 |
 
@@ -71,6 +71,7 @@ Hailo-10 NPU 加速的高性能 STT（语音转文本）和 TTS（文本转语�
 * 🔀 **歧义感知分类：** `classify_intent()` 会对文本进行规范化（Unicode NFKC、去除填充词/标点），并拒绝真正匹配多个已知命令的转录文本，而不是悄悄地猜一个。*（已实现；供下方 Watch 语音网关使用）*
 * 🔏 **带签名且一次性的确认（v0）：** 用于确认停止、开始任务或返航的 `confirmationToken` 由服务器密钥（`HYDRA_UMC_VOICE_UI_CONFIRM_SECRET`，至少 16 个字符；未设置时每个进程生成一个随机密钥）通过 HMAC-SHA256 签名，带有随机 nonce，且只被接受一次：同一令牌的第二次使用、手工拼出的其他意图的令牌，或用另一把密钥签名的令牌，都会被作为 `invalid` 拒绝。此前令牌只是其自身内容的 SHA-256 前缀、没有任何密钥，所以任何知道格式的人都能构造出有效确认，而有效确认可在 30 秒内被重放。OS 安装程序会与其他设备密钥一起生成该密钥。*（已实现）*
 * 🛑 **语音停止指令从不被拖延（服务器设置）：** 默认情况下，停止请求会立即得到答复，不带确认令牌，并带有 `priority: safety-stop`，以便使用方把它转换为受控停止（它永远不能取代物理急停）；开始运动仍需确认。`HYDRA_UMC_VOICE_UI_STOP_REQUIRES_CONFIRMATION=1` 可恢复对停止的确认。*(已实现)*
+* 🎚️ **每个语音操作的风险等级（一个文件）：** 状态查询属于信息类，停止会立即响应；开始任务和回家属于运动，始终需要确认。该表从 `HYDRA_UMC_VOICE_UI_RISK_FILE` 读取（默认 `/etc/hydra-umc/voice-ui-risk.json`，示例见 `deploy/voice-ui-risk.json.example`），只能让默认值更严格：降低某个操作等级的条目会被忽略，文件缺失或损坏时保持默认值。
 * 🔏 **确认只对提出请求的人有效，已确认的结果可以验证：** 一个回合可以指明它的 `subject`（HYDRA-UMC-SERVER 代为转发时所用的已登录用户）；带签名的确认令牌携带该值，并且只对同一主体确认（被拒绝不会消耗令牌）。已确认的结果还包含 `subject`、`confirmedAtUtc` 和一次性 `nonce`；如果设置了 `HYDRA_UMC_VOICE_UI_RESULT_KEY`（16 个字符或更长，与 HYDRA-UMC-SERVER 持有的值相同），还会带有 HMAC-SHA256 `signature`，服务器先验证它才会相信该结果。`HYDRA_UMC_VOICE_UI_REQUIRE_SUBJECT=1` 还会拒绝不指明任何人的回合或确认（默认关闭）。*（已实现）*
 * 🙈 **回复不会重复所说的内容（服务器设置）：** 默认情况下，回复的解释只列出匹配的规则；设置 `HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT=1` 会加入转写文本（`heardText`、`normalizedText`），它属于个人数据。限制：规则只理解英语，轮次中的 `locale` 会被校验但不会被使用。 服务器也可以通过其 Server Admin 界面为每一轮设置它(以及最低置信度);本服务的环境变量优先于服务器。
 * 🛡️ **噪声消除：** 针对高环境噪声的工业环境进行优化。*（计划中）*
@@ -146,7 +147,7 @@ flowchart LR
 
 ## 🧪 测试
 
-运行 `python -m pytest -q tests` 会执行 195 个自动测试。 不需要硬件，也不需要这台机器以外的任何东西。
+运行 `python -m pytest -q tests` 会执行 239 个自动测试。 不需要硬件，也不需要这台机器以外的任何东西。
 
 CI 运行 `HYDRA_UMC_CI=1 python tools/ci_validate.py`，检查清单、文档、八个 README 和图片。
 

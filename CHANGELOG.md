@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The risk level of each spoken action is read from a file:** a status request is informative and a stop is answered at once, while starting a mission and going home are movements that always need a confirmation (the restrictive default). `HYDRA_UMC_VOICE_UI_RISK_FILE` (default `/etc/hydra-umc/voice-ui-risk.json`) names a table that can only make this stricter, for example asking to confirm a status request or a stop; an entry that lowers an action, an unknown name and a broken file are ignored and the default stays. The older `HYDRA_UMC_VOICE_UI_STOP_REQUIRES_CONFIRMATION` still raises the stop. Example in `deploy/voice-ui-risk.json.example`.
+
 ## [0.1.9] - Block by block voice detection, a minimum confidence and the transcript set by the server, and the universal README
 
 - **Voice activity detection can run block by block:** `StreamingVad` takes samples of any block size and gives back each voice segment as soon as it ends (the same segments as the whole-clip detector for a fixed gate, tested with block sizes from one sample to the whole clip, mono and stereo); `analyze-audio --stream` reads a file one block at a time so its memory does not grow with the recording. With a noise-relative gate the floor is a running estimate. Tested; not run on a live microphone.

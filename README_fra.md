@@ -18,7 +18,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/STT-Whisper%20Local-FF6F00.svg" alt="STT">
   <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/Tests-195%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-239%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.1.9-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
@@ -35,7 +35,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | Version | `0.1.9` |
 | Maturité | Fonctionnel |
-| Tests | 195 (`python -m pytest -q tests`) |
+| Tests | 239 (`python -m pytest -q tests`) |
 | Technologie | Python / Rule-based intent parser / Energy-gate VAD |
 | Cible | Le Raspberry Pi CM5 d'une cellule HYDRA-UMC |
 | Sur matériel réel | Pas encore : aucune exécution sur du matériel réel n'est consignée pour cette version |
@@ -51,7 +51,7 @@ Chaque ligne est une partie de ce dépôt et le feu dit où elle en est aujourd'
 | Domaine | État | Ce que cela veut dire ici |
 |---|---|---|
 | Logiciel | 🟡 | Fonctionne pour son usage principal ; la vérification d'honnêteté ci-dessus liste ce qui manque encore |
-| Tests | 🟢 | 195 tests automatiques, exécutés à chaque modification |
+| Tests | 🟢 | 239 tests automatiques, exécutés à chaque modification |
 | Matériel réel | 🔴 | Pas encore : aucune exécution sur du matériel réel n'est consignée pour cette version |
 | Documentation | 🟢 | README en huit langues, vérifié par rapport au manifeste à chaque modification |
 
@@ -69,6 +69,7 @@ Il permet aux opérateurs de contrôler les missions robotiques, de consulter l'
 * 🔀 **Classification consciente de l'ambiguïté :** `classify_intent()` normalise le texte (Unicode NFKC, suppression des mots de remplissage/ponctuation) et rejette une transcription qui correspond réellement à plus d'une commande connue au lieu de deviner silencieusement laquelle. *(implémenté ; utilisé par la passerelle vocale Watch ci-dessous)*
 * 🔏 **Confirmations signées à usage unique (v0) :** le `confirmationToken` qui confirme un arrêt, un démarrage de mission ou un retour à la base est signé en HMAC-SHA256 avec une clé du serveur (`HYDRA_UMC_VOICE_UI_CONFIRM_SECRET`, au moins 16 caractères ; sans elle, une clé aléatoire est créée par processus), porte un nonce aléatoire et n'est accepté qu'une fois : un second usage du même jeton, un jeton pour une autre intention assemblé à la main ou signé avec une autre clé est refusé comme `invalid`. Auparavant, le jeton était un préfixe SHA-256 de son propre contenu sans secret : quiconque connaissait le format pouvait fabriquer une confirmation valide, et une confirmation valide pouvait être rejouée pendant ses 30 secondes. L'installateur d'OS génère la clé avec les autres secrets de l'appareil. *(implémenté)*
 * 🛑 **Un arrêt vocal n'est jamais retenu (réglage du serveur) :** par défaut une demande d'arrêt reçoit une réponse immédiate, sans jeton de confirmation et avec `priority: safety-stop` pour qu'un consommateur en fasse un arrêt contrôlé (elle ne remplace jamais l'arrêt d'urgence physique) ; démarrer un mouvement reste confirmé. `HYDRA_UMC_VOICE_UI_STOP_REQUIRES_CONFIRMATION=1` rétablit la confirmation de l'arrêt. *(implémenté)*
+* 🎚️ **Niveau de risque de chaque action vocale (un fichier) :** une demande d'état est informative et un arrêt est traité aussitôt ; démarrer une mission et rentrer à la base sont des mouvements et exigent toujours une confirmation. La table est lue dans `HYDRA_UMC_VOICE_UI_RISK_FILE` (par défaut `/etc/hydra-umc/voice-ui-risk.json`, exemple dans `deploy/voice-ui-risk.json.example`) et ne peut que durcir le défaut : une entrée qui abaisse une action est ignorée, et un fichier absent ou cassé laisse le défaut.
 * 🔏 **Une confirmation vaut pour la personne qui a demandé, et un résultat confirmé peut être vérifié :** un tour peut nommer son `subject` (l'utilisateur connecté pour qui HYDRA-UMC-SERVER le relaie) ; le jeton de confirmation signé le porte et ne confirme que pour ce même sujet (un refus ne consomme pas le jeton). Un résultat confirmé porte aussi `subject`, `confirmedAtUtc` et le `nonce` à usage unique et, si `HYDRA_UMC_VOICE_UI_RESULT_KEY` (16 caractères ou plus, la même valeur que détient HYDRA-UMC-SERVER) est définie, une `signature` HMAC-SHA256 que le serveur vérifie avant de croire le résultat. `HYDRA_UMC_VOICE_UI_REQUIRE_SUBJECT=1` refuse en plus un tour ou une confirmation qui ne nomme personne (désactivé par défaut). *(implémenté)*
 * 🙈 **La réponse ne répète pas ce qui a été dit (réglage du serveur) :** par défaut l'interprétation d'une réponse ne liste que les règles reconnues ; `HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT=1` ajoute la transcription (`heardText`, `normalizedText`), qui est une donnée personnelle. Limites : les règles ne comprennent que l'anglais, et le `locale` d'un tour est vérifié mais pas utilisé. Le Server peut aussi le fixer (ainsi que la confiance minimale) à chaque tour depuis son écran Server Admin ; l'environnement de ce service l'emporte sur le Server.
 * 🛡️ **Suppression du bruit :** Optimisé pour les environnements industriels avec un bruit ambiant élevé. *(prévu)*
@@ -208,7 +209,7 @@ Nécessite Python 3.10 ou plus récent.
 
 ## 🧪 Tests
 
-195 tests automatiques s'exécutent avec `python -m pytest -q tests`. Ils n'ont besoin ni de matériel ni de rien en dehors de cette machine.
+239 tests automatiques s'exécutent avec `python -m pytest -q tests`. Ils n'ont besoin ni de matériel ni de rien en dehors de cette machine.
 
 La CI exécute `HYDRA_UMC_CI=1 python tools/ci_validate.py`, qui vérifie le manifeste, les documents, les huit README et les images.
 

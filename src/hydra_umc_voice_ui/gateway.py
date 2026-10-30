@@ -47,6 +47,7 @@ from .intent import (
     classify_intent,
     normalize_text,
 )
+from .risk import LEVEL_MOVEMENT, RiskTable, load_risk_table
 
 MAX_TRANSCRIPT_LENGTH = 500
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -418,6 +419,7 @@ def process_voice_turn(
     stop_requires_confirmation: bool | None = None,
     include_heard_text: bool | None = None,
     min_confidence: float | None = None,
+    risk_table: RiskTable | None = None,
 ) -> AssistantReply:
     """Parse one Watch request and return an honest, non-actuating reply.
 
@@ -431,9 +433,10 @@ def process_voice_turn(
     `now` defaults to the real current UTC time - overridable so a test
     can issue a `PendingConfirmation` at a known instant.
 
-    A stop is answered without a confirmation unless `stop_requires_confirmation`
-    (default: the HYDRA_UMC_VOICE_UI_STOP_REQUIRES_CONFIRMATION server setting, off)
-    says otherwise: only starting a movement has to be confirmed.
+    What has to be confirmed depends on the risk level of the action (`risk_table`; default: the file named by
+    HYDRA_UMC_VOICE_UI_RISK_FILE, see risk.py): by default a status request and a stop are answered at once and only a
+    movement is held for a confirmation; the file can only make this stricter. `stop_requires_confirmation` (default: the
+    HYDRA_UMC_VOICE_UI_STOP_REQUIRES_CONFIRMATION setting, off) raises the stop to a movement.
 
     The interpretation carries the transcript (`heardText`, `normalizedText`) only when `include_heard_text`
     (default: the HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT setting of this service; when it is not set, the `options` the
@@ -445,6 +448,10 @@ def process_voice_turn(
     """
     if stop_requires_confirmation is None:
         stop_requires_confirmation = stop_requires_confirmation_default()
+    # the risk level of each action comes from the configuration file (restrictive default); the older stop setting only raises it
+    risk = risk_table if risk_table is not None else load_risk_table()
+    if stop_requires_confirmation:
+        risk = risk.raised(INTENT_STOP, LEVEL_MOVEMENT)
     # order: the argument, the environment of this service (it wins over the Server), what the Server asked of this turn,
     # the built-in default
     if include_heard_text is None:
@@ -497,7 +504,7 @@ def process_voice_turn(
         )
     intent = classification.matches[0]
 
-    if intent.name == INTENT_STATUS:
+    if intent.name == INTENT_STATUS and not risk.requires_confirmation(INTENT_STATUS):
         robot = intent.entities.get("robot_id")
         target = f" for robot {robot}" if robot else ""
         return AssistantReply(
@@ -526,8 +533,10 @@ def process_voice_turn(
         text = f"Start request for {mission} understood. No motion is executed until an authenticated primary control confirms it."
     elif intent.name == INTENT_GO_HOME:
         text = "Go-home request understood. No motion is executed until an authenticated primary control confirms it."
+    elif intent.name == INTENT_STATUS:
+        text = "Status request understood. It is held until it is confirmed."
     elif intent.name == INTENT_STOP:
-        if not stop_requires_confirmation:
+        if not risk.requires_confirmation(INTENT_STOP):
             # Not held back: a stop that waits for a second answer can arrive too late.
             return AssistantReply(
                 request_id=turn.request_id,

@@ -18,7 +18,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/STT-Whisper%20Local-FF6F00.svg" alt="STT">
   <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/Tests-195%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-239%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.1.9-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
@@ -35,7 +35,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | バージョン | `0.1.9` |
 | 成熟度 | 機能する |
-| テスト | 195 (`python -m pytest -q tests`) |
+| テスト | 239 (`python -m pytest -q tests`) |
 | 技術 | Python / Rule-based intent parser / Energy-gate VAD |
 | 対象 | HYDRA-UMC セルの Raspberry Pi CM5 |
 | 実機での確認 | まだです：このバージョンについて実機での動作記録はありません |
@@ -51,7 +51,7 @@ GPL-3.0-or-later - see LICENSE
 | 領域 | 状態 | ここでの意味 |
 |---|---|---|
 | ソフトウェア | 🟡 | 主な目的では動作します。足りない点は上の正直さの確認に書かれています |
-| テスト | 🟢 | 自動テスト 195 件。変更のたびに実行されます |
+| テスト | 🟢 | 自動テスト 239 件。変更のたびに実行されます |
 | 実機 | 🔴 | まだです：このバージョンについて実機での動作記録はありません |
 | ドキュメント | 🟢 | 8 言語の README。変更のたびにマニフェストと照合されます |
 
@@ -73,6 +73,7 @@ GPL-3.0-or-later - see LICENSE
 * 🔀 **あいまいさを考慮した分類：** `classify_intent()` はテキストを正規化し（Unicode NFKC、フィラー語/句読点の除去）、複数の既知コマンドに本当に一致する文字起こしを、黙って1つに絞り込むのではなく拒否します。*（実装済み；下記の Watch 音声ゲートウェイで使用されます）*
 * 🔏 **署名付きの使い切り確認（v0）：** 停止・ミッション開始・帰還を確認する `confirmationToken` は、サーバー鍵（`HYDRA_UMC_VOICE_UI_CONFIRM_SECRET`、16 文字以上。未設定ならプロセスごとにランダムな鍵を生成）による HMAC-SHA256 で署名され、ランダムなナンスを持ち、1 回だけ受け付けられます。同じトークンの 2 回目の使用、手作りした別の意図のトークン、別の鍵で署名されたトークンは `invalid` として拒否されます。以前のトークンは秘密を使わず自身の内容の SHA-256 先頭部分だけだったため、形式を知っていれば誰でも有効な確認を作れ、有効なものは 30 秒の間に再利用できました。OS インストーラーは他のデバイスシークレットと一緒にこの鍵を生成します。*（実装済み）*
 * 🛑 **音声による停止は決して保留されません（サーバー設定）：** 既定では停止要求は確認トークンなしで即座に応答され、`priority: safety-stop` が付くため、利用側が制御された停止に変換できます（物理的な非常停止の代わりにはなりません）。動作の開始は引き続き確認されます。`HYDRA_UMC_VOICE_UI_STOP_REQUIRES_CONFIRMATION=1` で停止の確認が復活します。*(実装済み)*
+* 🎚️ **音声操作ごとのリスクレベル(ファイル):** 状態の問い合わせは情報提供、停止は直ちに応答されます。ミッション開始と帰還は動作であり、常に確認が必要です。表は `HYDRA_UMC_VOICE_UI_RISK_FILE`(既定は `/etc/hydra-umc/voice-ui-risk.json`、例は `deploy/voice-ui-risk.json.example`)から読み込まれ、既定をより厳しくする方向にのみ変更できます。操作を緩める項目は無視され、ファイルが無い、または壊れている場合は既定のままです。
 * 🔏 **確認は依頼した本人のためのもので、確認済みの結果は検証できます：** ターンは `subject`（HYDRA-UMC-SERVER が中継するサインイン中のユーザー）を指定でき、署名付きの確認トークンがそれを保持して、同じ subject に対してのみ確認します（拒否してもトークンは消費されません）。確認済みの結果には `subject`、`confirmedAtUtc`、使い切りの `nonce` も含まれ、`HYDRA_UMC_VOICE_UI_RESULT_KEY`（16 文字以上、HYDRA-UMC-SERVER が持つものと同じ値）が設定されていれば、サーバーが結果を信じる前に検証する HMAC-SHA256 の `signature` が付きます。`HYDRA_UMC_VOICE_UI_REQUIRE_SUBJECT=1` にすると、誰も指定しないターンや確認も拒否します（既定はオフ）。*（実装済み）*
 * 🙈 **応答は話された内容を繰り返しません（サーバー設定）：** 既定では、応答の解釈には一致したルールだけが載ります。`HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT=1` を設定すると文字起こし（`heardText`、`normalizedText`）が加わります。これは個人データです。制限：ルールは英語のみを理解し、ターンの `locale` は検証されますが使われません。 サーバーも Server Admin 画面から、ターンごとにこれ(および最小信頼度)を設定できます。このサービスの環境変数がサーバーより優先されます。
 * 🛡️ **ノイズキャンセリング：** 高い環境ノイズを伴う産業環境向けに最適化。*（計画中）*
@@ -148,7 +149,7 @@ Python 3.10 以上が必要です。
 
 ## 🧪 テスト
 
-`python -m pytest -q tests` で自動テスト 195 件を実行します。 ハードウェアも、このマシンの外にあるものも必要ありません。
+`python -m pytest -q tests` で自動テスト 239 件を実行します。 ハードウェアも、このマシンの外にあるものも必要ありません。
 
 CI は `HYDRA_UMC_CI=1 python tools/ci_validate.py` を実行し、マニフェスト、文書、8 つの README、図を検査します。
 
