@@ -26,6 +26,8 @@ and never past its own real expiry.
 """
 from __future__ import annotations
 
+from typing import Any
+
 import base64
 import binascii
 import hashlib
@@ -478,7 +480,7 @@ def process_voice_turn(
     classification = classify_intent(turn.transcript)
     language = language_of(turn.locale)
 
-    def said(code: str, **parameters: str) -> dict[str, object]:
+    def said(code: str, **parameters: str) -> dict[str, Any]:
         """The text of the reply in the language of the turn, and the code that names it."""
         return {
             "text": message(code, turn.locale, **parameters),

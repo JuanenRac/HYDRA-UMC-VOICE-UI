@@ -25,3 +25,9 @@ hydra-umc-voice-ui = "hydra_umc_voice_ui.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff.lint]
+select = ["F", "E9", "B"]
+
+[tool.mypy]
+ignore_missing_imports = true
