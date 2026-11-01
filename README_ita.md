@@ -18,7 +18,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/STT-Whisper%20Local-FF6F00.svg" alt="STT">
   <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/Tests-255%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-330%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.0-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
@@ -35,7 +35,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | Versione | `0.2.0` |
 | Maturità | Funzionale |
-| Test | 255 (`python -m pytest -q tests`) |
+| Test | 330 (`python -m pytest -q tests`) |
 | Tecnologia | Python / Rule-based intent parser / Energy-gate VAD |
 | Destinazione | Il Raspberry Pi CM5 di una cella HYDRA-UMC |
 | Su hardware reale | Non ancora: per questa versione non risulta alcuna esecuzione su hardware reale |
@@ -51,7 +51,7 @@ Ogni riga è una parte di questo repository e il semaforo dice a che punto è og
 | Area | Stato | Cosa significa qui |
 |---|---|---|
 | Software | 🟡 | Funziona per il suo scopo principale; la verifica di onestà qui sopra elenca ciò che manca ancora |
-| Test | 🟢 | 255 test automatici, eseguiti a ogni modifica |
+| Test | 🟢 | 330 test automatici, eseguiti a ogni modifica |
 | Hardware reale | 🔴 | Non ancora: per questa versione non risulta alcuna esecuzione su hardware reale |
 | Documentazione | 🟢 | README in otto lingue, verificato rispetto al manifesto a ogni modifica |
 
@@ -82,7 +82,7 @@ Consente agli operatori di controllare le missioni robotiche, interrogare lo sta
 
 ## 🧩 Ruolo in HYDRA-UMC
 
-**HYDRA-UMC-VOICE-UI** è il front end vocale del nodo cognitivo: rileva la voce in un file WAV, analizza con regole un testo già riconosciuto per ricavarne un'intenzione e offre un gateway HTTP limitato per il flusso dell'orologio, che chiede una conferma prima di passare qualsiasi cosa. Non riconosce ancora il parlato e non invia mai un comando fisico.
+**HYDRA-UMC-VOICE-UI** è il front end vocale del nodo cognitivo: rileva la voce in un file WAV, analizza con regole un testo già riconosciuto, nelle otto lingue del progetto, per ricavarne un'intenzione e offre un gateway HTTP limitato per il flusso dell'orologio, che chiede una conferma prima di passare qualsiasi cosa. Non riconosce ancora il parlato e non invia mai un comando fisico.
 
 ## 🏛️ Architettura
 
@@ -206,7 +206,7 @@ Richiede Python 3.10 o successivo.
 
 ## 🧪 Test
 
-255 test automatici si eseguono con `python -m pytest -q tests`. Non richiedono hardware né nulla al di fuori di questa macchina.
+330 test automatici si eseguono con `python -m pytest -q tests`. Non richiedono hardware né nulla al di fuori di questa macchina.
 
 La CI esegue `HYDRA_UMC_CI=1 python tools/ci_validate.py`, che controlla il manifesto, i documenti, gli otto README e le immagini.
 

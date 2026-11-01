@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The four spoken commands are understood in the eight languages of the project.** Start a mission, stop, status and go home are recognised in English, Spanish, German, French, Italian, Portuguese, Japanese and Chinese, whatever the `locale` of the turn is (`intent_languages.py`). A phrase is a command only when it says the whole command, and everyday words that are also prepositions ("para" in Spanish and Portuguese) are never a stop by themselves. Every language has its words of negation: "no pares", "ne t'arrête pas", "止めないで" are answered with a request to say it again, never as the command they deny. The English rules are unchanged.
+- **The whole chain is tested with synthetic audio and no recognizer:** a recording made of tones, silence and a constant hum is cut by the voice detector into utterances, a stand-in recognizer says what each one was, and the gateway answers: status at once, a stop with priority and no confirmation, a movement held for the confirmation of the primary device, a movement heard with low confidence asked again, a negated or two-command sentence never run, and the speech over a hum found with the gate relative to the noise. A real speech recognizer is still not part of this repository.
+- 7 new tests of the chain and 69 of the languages; the count in the README is the real one again (330).
+
 ## [0.2.0] - Replies in the language of the client and the risk level of each spoken action read from a file
 
 - **Replies are made in the language of the client:** the text of every reply is composed in English, Spanish, German, French, Italian, Japanese, Chinese or Portuguese according to the `locale` of the voice turn (any other locale gets English). The reply also carries `messageCode`, `messageParams` and `textLanguage`, so that a client can compose the sentence itself. The sentences of the eight languages live in `messages.py`.

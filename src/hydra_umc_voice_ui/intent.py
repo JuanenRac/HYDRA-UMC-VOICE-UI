@@ -140,6 +140,9 @@ def classify_intent(text: str) -> IntentClassification:
     ambiguity a caller (see gateway.py's `process_voice_turn`) must ask
     the operator to clarify, never silently resolve on its own.
     """
+    # the phrases of the seven other languages are an addition (see intent_languages.py); imported here because that module needs the names above
+    from .intent_languages import is_negated, language_matches
+
     normalized = normalize_text(text)
     matches: list[Intent] = []
     for name, pattern in _RULES:
@@ -148,7 +151,14 @@ def classify_intent(text: str) -> IntentClassification:
             continue
         entities = {key: value for key, value in match.groupdict().items() if value is not None}
         matches.append(Intent(name=name, entities=entities))
+    plain = _APOSTROPHES.sub("'", normalized)
+    for name, entities in language_matches(plain):
+        known = next((index for index, match in enumerate(matches) if match.name == name), None)
+        if known is None:
+            matches.append(Intent(name=name, entities=entities))
+        elif len(entities) > len(matches[known].entities):
+            matches[known] = Intent(name=name, entities=entities)   # the same command, said with more detail (a robot number the English rule did not read)
     return IntentClassification(
         matches=tuple(matches),
-        negated=bool(matches) and _NEGATION.search(_APOSTROPHES.sub("'", normalized)) is not None,
+        negated=bool(matches) and (_NEGATION.search(plain) is not None or is_negated(plain)),
     )
