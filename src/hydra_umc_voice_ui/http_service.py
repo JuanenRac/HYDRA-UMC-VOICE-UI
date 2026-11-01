@@ -15,6 +15,7 @@ from typing import Final
 
 from . import __version__
 from .gateway import VoiceTurn, VoiceTurnValidationError, confirm_pending_action, process_voice_turn
+from .metrics import Metrics
 from .ratelimit import DEFAULT_REQUESTS_PER_MINUTE, ClientRateLimiter
 
 MAX_BODY_BYTES: Final = 4 * 1024
@@ -33,6 +34,7 @@ class VoiceGatewayServer(ThreadingHTTPServer):
         if requests_per_minute is None:
             requests_per_minute = _configured_rate()
         self.limiter = ClientRateLimiter(requests_per_minute)
+        self.metrics = Metrics()
 
 
 def _configured_rate() -> int:
@@ -78,7 +80,24 @@ class VoiceGatewayHandler(BaseHTTPRequestHandler):
         received = self.headers.get("Authorization", "")
         return hmac.compare_digest(received, f"Bearer {expected}")
 
+    def _write_text(self, status: HTTPStatus, text: str) -> None:
+        raw = text.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+        self.send_header("Content-Length", str(len(raw)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(raw)
+
     def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API name
+        if self.path == "/metrics":
+            # the counters in the text format of Prometheus: behind the token when there is one (/health stays open for the service registry)
+            if not self._is_authorized():
+                self.server.metrics.refused("unauthorized")
+                self._write_json(HTTPStatus.UNAUTHORIZED, {"error": "valid bearer token required"})
+                return
+            self._write_text(HTTPStatus.OK, self.server.metrics.render())
+            return
         if self.path != "/health":
             self._write_json(HTTPStatus.NOT_FOUND, {"error": "not found"})
             return
@@ -96,22 +115,27 @@ class VoiceGatewayHandler(BaseHTTPRequestHandler):
             return
         allowed, wait = self.server.limiter.allow(self.client_address[0])
         if not allowed:
+            self.server.metrics.refused("rate_limited")
             self._write_json(HTTPStatus.TOO_MANY_REQUESTS, {"error": "too many requests from this address", "retryAfterSeconds": round(wait, 1)})
             return
         if not self._is_authorized():
+            self.server.metrics.refused("unauthorized")
             self._write_json(HTTPStatus.UNAUTHORIZED, {"error": "valid bearer token required"})
             return
         try:
             length = int(self.headers.get("Content-Length", ""))
         except ValueError:
+            self.server.metrics.refused("bad_request")
             self._write_json(HTTPStatus.BAD_REQUEST, {"error": "valid Content-Length required"})
             return
         if not 0 < length <= MAX_BODY_BYTES:
+            self.server.metrics.refused("too_large")
             self._write_json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": f"body must contain 1-{MAX_BODY_BYTES} bytes"})
             return
         try:
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            self.server.metrics.refused("bad_request")
             self._write_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
             return
 
@@ -123,14 +147,17 @@ class VoiceGatewayHandler(BaseHTTPRequestHandler):
             token = payload.get("confirmationToken") if isinstance(payload, dict) else None
             asking = payload.get("subject") if isinstance(payload, dict) else None
             result = confirm_pending_action(token, subject=asking)
+            self.server.metrics.confirmation()
             self._write_json(HTTPStatus.OK, result.to_payload())
             return
 
         try:
             reply = process_voice_turn(VoiceTurn.from_payload(payload))
         except VoiceTurnValidationError as error:
+            self.server.metrics.refused("bad_request")
             self._write_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
             return
+        self.server.metrics.turn(reply.intent.name if reply.intent else None, needs_confirmation=reply.requires_confirmation)
         self._write_json(HTTPStatus.OK, reply.to_payload())
 
 
