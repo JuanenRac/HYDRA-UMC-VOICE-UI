@@ -152,3 +152,29 @@ Both settings above can also be set by an administrator from the Server Admin sc
 ```
 
 Both fields are optional. `includeHeardText` must be true or false and `minConfidence` a number from 0 to 1; anything else (or an `options` that is not an object) is refused with a 400 and a message that names the field. The order is always the same: the environment of this service (`HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT`, `HYDRA_UMC_VOICE_UI_MIN_CONFIDENCE`) wins when it is set, then the `options` of the turn, then the built-in default (transcript off, 0.6), which is what a turn without `options` gets. The Server replaces any `options` a client sends with its own, so a phone cannot change them. The options are read from the body of the request, so the service token (`HYDRA_UMC_VOICE_UI_TOKEN`) is what keeps other callers from setting them; on a loopback bind without a token any local process can.
+
+## Optional voice features (all off by default)
+
+Everything in this section is switched on from one configuration file, `HYDRA_UMC_VOICE_UI_CONFIG` (default `/etc/hydra-umc/voice-ui.json`, example in `deploy/voice-ui.json.example`). A value that is not valid is ignored and the default stays; a missing or broken file leaves every feature off. Raw audio is never stored by any of them.
+
+### Wake word and push-to-talk
+
+With `wake.enabled` a turn is acted on only when it was started on purpose: the turn carries `"activation": "push_to_talk"` (the button; refused when `wake.allowPushToTalk` is false) or `"activation": "wake_word"` (the device heard the wake word itself), or the transcript begins with one of `wake.phrases`, which is then taken off before the command is read. Otherwise the reply is `not_activated` and nothing happens. A spoken stop does not need the wake word unless `wake.stopNeedsWake` is true.
+
+### Who is speaking
+
+With `speaker.enabled` a request that starts a movement (a mission, going home) is accepted only for an enrolled operator. The turn carries `"speakerVector"`, a list of 8 to 512 numbers made on the device from the voice (never audio); it is compared by cosine similarity with the vectors in `speaker.storeFile` and must reach `speaker.threshold` and beat the second best by `speaker.margin`. The operator found becomes the subject of the confirmation token; when the turn also names a `subject` (the signed-in user) it must be the same, or the reply is `speaker_not_authorised` with no token. The confirmation of the primary device is still required, and a stop, a status request and a question are never held back by this check. The vector is never repeated in a reply, a log or the audit log; the reply only says `speaker: {checked, verified}`.
+
+Enrolment needs the service token (a service with no token refuses it) and speaker identification on: `POST /v1/voice/speaker/enroll` with `{"subject": "ana", "vector": [...]}` and `POST /v1/voice/speaker/forget` with `{"subject": "ana"}`, which removes the vector from the file at once. The subject of an enrolment must be the same name the Server uses for that user.
+
+### Questions about error codes
+
+"What does error 0x05 mean" (and the same in the other seven languages) is a read-only question. With `queries.enabled` it is answered from HYDRA-UMC-DOCS-QA (`GET /error?code=`) at `queries.docsQaUrl`, with `queries.tokenFile` for its bearer token, and the reply carries the citations in `sources`. A code the documentation does not define is answered as not found; an assistant that does not answer is answered as unavailable. With the feature off the reply says so. The documentation is English, so the definition is read out as written.
+
+### Audit log
+
+With `audit.enabled` every turn and every confirmation adds one line to `audit.file`: time, request id, kind of event, intent, outcome (a short code), how the confirmation went, whether the voice was verified, and the person. The person is a keyed hash (the key is a random file kept beside the log), or the name itself with `audit.storeSubjectPlain`. The transcript, the locale, audio, the voice vector and addresses are never written. A file grows to `audit.maxBytes`, then it is rotated to `.1`, `.2`... up to `audit.maxFiles` files and the oldest is dropped. The server collects the last records with `GET /v1/voice/audit?limit=N` (needs the service token). A record that cannot be written never stops a command.
+
+### Alerts read aloud
+
+`POST /v1/voice/alert` takes `{"alertId", "source": "system-status" | "anomaly", "severity": "info" | "warning" | "critical", "locale", ...}` and answers with the sentence to say and `speak` (whether to say it now). For `anomaly` the body also has `node` and `verdict` (`normal`, `suspect`, `anomalous`) and the sentence is a fixed one in the eight languages; a `normal` verdict is never spoken. For `system-status` it has `text`, the `speak` text the Server wrote, cleaned and cut to `alerts.maxChars`. With `alerts.enabled` off nothing is to be spoken (`reason: alerts_off`); an alert below `alerts.minSeverity` is not (`below_threshold`), and the same alert is not repeated inside `alerts.repeatSeconds` (`alerts.criticalRepeatSeconds` for a critical one). The device produces the sound.

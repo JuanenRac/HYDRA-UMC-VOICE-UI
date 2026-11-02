@@ -18,7 +18,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/STT-Whisper%20Local-FF6F00.svg" alt="STT">
   <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/Tests-337%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-397%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.1-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
@@ -35,7 +35,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | Versão | `0.2.1` |
 | Maturidade | Funcional |
-| Testes | 337 (`python -m pytest -q tests`) |
+| Testes | 397 (`python -m pytest -q tests`) |
 | Tecnologia | Python / Rule-based intent parser / Energy-gate VAD |
 | Destino | O Raspberry Pi CM5 de uma célula HYDRA-UMC |
 | Em hardware real | Ainda não: não há registo de execução em hardware real para esta versão |
@@ -51,7 +51,7 @@ Cada linha é uma parte deste repositório e a luz diz até onde chega hoje. É 
 | Área | Estado | O que significa aqui |
 |---|---|---|
 | Software | 🟡 | Funciona para o seu propósito principal; a verificação de honestidade acima lista o que ainda falta |
-| Testes | 🟢 | 337 testes automáticos, executados a cada alteração |
+| Testes | 🟢 | 397 testes automáticos, executados a cada alteração |
 | Hardware real | 🔴 | Ainda não: não há registo de execução em hardware real para esta versão |
 | Interface e protocolos | 🟡 | As rotas ou mensagens que oferece estão documentadas e testadas com um cliente; ainda nem todos os clientes as usaram |
 | Integração | 🟠 | Funciona em conjunto com os outros serviços na bancada de testes da CM5 e as suas mensagens seguem os contratos partilhados do SDK |
@@ -79,6 +79,9 @@ Permite aos operadores controlar missões robóticas, consultar o estado do sist
 * 🎚️ **Nível de risco de cada ação por voz (um ficheiro):** um pedido de estado é informativo e uma paragem é respondida de imediato; iniciar uma missão e ir para casa são movimentos e exigem sempre confirmação. A tabela lê-se de `HYDRA_UMC_VOICE_UI_RISK_FILE` (por omissão `/etc/hydra-umc/voice-ui-risk.json`, exemplo em `deploy/voice-ui-risk.json.example`) e só pode tornar o valor por omissão mais estrito: uma entrada que baixe uma ação é ignorada, e um ficheiro em falta ou danificado deixa o valor por omissão.
 * 🔏 **Uma confirmação vale para quem a pediu, e um resultado confirmado pode ser verificado:** um turno pode indicar o seu `subject` (o utilizador com sessão iniciada para quem o HYDRA-UMC-SERVER o retransmite); o token de confirmação assinado transporta-o e só confirma para esse mesmo sujeito (uma recusa não consome o token). Um resultado confirmado leva também `subject`, `confirmedAtUtc` e o `nonce` de utilização única e, se `HYDRA_UMC_VOICE_UI_RESULT_KEY` (16 caracteres ou mais, o mesmo valor que o HYDRA-UMC-SERVER tem) estiver definida, uma `signature` HMAC-SHA256 que o servidor verifica antes de acreditar no resultado. `HYDRA_UMC_VOICE_UI_REQUIRE_SUBJECT=1` recusa ainda um turno ou uma confirmação que não nomeie ninguém (desativado por omissão). *(implementado)*
 * 🙈 **A resposta não repete o que foi dito (definição do servidor):** por omissão a interpretação de uma resposta lista apenas as regras que coincidiram; `HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT=1` acrescenta a transcrição (`heardText`, `normalizedText`), que é um dado pessoal. Limites: as regras só entendem inglês e o `locale` de um turno é validado mas não é usado. O Server também pode defini-lo (e a confiança mínima) em cada turno a partir do seu ecrã Server Admin; o ambiente deste serviço tem prioridade sobre o Server.
+* 🗣️ **Palavra de ativação, premir para falar e identificação do falante (opcionais, tudo desligado por predefinição):** com `wake.enabled` um turno tem de começar com uma frase de ativação do ficheiro de configuração, com o botão (`activation: push_to_talk`) ou anunciado pelo dispositivo (`wake_word`); uma paragem falada não a exige, a não ser que o local o peça. Com `speaker.enabled` um movimento só é pedido para um operador que registou um vetor de voz (feito no dispositivo, nunca áudio; guardado num ficheiro local, esquecido a pedido e não enviado para lado nenhum); a confirmação do dispositivo principal continua a ser necessária. Definições em `voice-ui.json` (exemplo em `deploy/voice-ui.json.example`). *(lado do serviço testado com vetores simulados; o lado do relógio continua pendente)*
+* ❓ **Perguntas sobre códigos de erro (opcional):** «o que significa o erro 0x05» é compreendida nos oito idiomas e respondida, só de leitura, pelo HYDRA-UMC-DOCS-QA com a citação do documento; se não houver entrada, a resposta di-lo em vez de adivinhar. Desligado por predefinição (`queries.enabled`).
+* 📜 **Registo de auditoria e alertas lidos em voz alta (opcionais):** `audit.enabled` escreve uma linha por comando (id do pedido, intenção, resultado, confirmação e a pessoa como hash com chave; nunca o texto, o áudio, o vetor de voz nem um endereço) com limite de tamanho e rotação, que o servidor lê em `GET /v1/voice/audit`. `alerts.enabled` compõe as frases de `POST /v1/voice/alert` para os textos do estado do sistema e os veredictos de anomalias, com limiar de gravidade e sem repetições; o som é feito pelo dispositivo.
 * 🛡️ **Cancelamento de ruído:** otimizado para ambientes industriais com muito ruído ambiente. *(planeado)*
 * 👨‍👩‍👧 **Filho do Cognitive AI Node:** corre como um de quatro serviços irmãos
   sob o [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE)
@@ -153,7 +156,7 @@ Requer Python 3.10 ou superior.
 
 ## 🧪 Testes
 
-337 testes automáticos correm com `python -m pytest -q tests`. Não precisam de hardware nem de nada fora desta máquina.
+397 testes automáticos correm com `python -m pytest -q tests`. Não precisam de hardware nem de nada fora desta máquina.
 
 A CI executa `HYDRA_UMC_CI=1 python tools/ci_validate.py`, que verifica o manifesto, os documentos, os oito README e as imagens.
 

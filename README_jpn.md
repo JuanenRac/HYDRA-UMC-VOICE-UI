@@ -18,7 +18,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/STT-Whisper%20Local-FF6F00.svg" alt="STT">
   <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/Tests-337%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-397%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.1-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
@@ -35,7 +35,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | バージョン | `0.2.1` |
 | 成熟度 | 機能する |
-| テスト | 337 (`python -m pytest -q tests`) |
+| テスト | 397 (`python -m pytest -q tests`) |
 | 技術 | Python / Rule-based intent parser / Energy-gate VAD |
 | 対象 | HYDRA-UMC セルの Raspberry Pi CM5 |
 | 実機での確認 | まだです：このバージョンについて実機での動作記録はありません |
@@ -51,7 +51,7 @@ GPL-3.0-or-later - see LICENSE
 | 領域 | 状態 | ここでの意味 |
 |---|---|---|
 | ソフトウェア | 🟡 | 主な目的では動作します。足りない点は上の正直さの確認に書かれています |
-| テスト | 🟢 | 自動テスト 337 件。変更のたびに実行されます |
+| テスト | 🟢 | 自動テスト 397 件。変更のたびに実行されます |
 | 実機 | 🔴 | まだです：このバージョンについて実機での動作記録はありません |
 | インターフェースとプロトコル | 🟡 | 提供するルートやメッセージは文書化され、クライアントで試験済みです。すべてのクライアントがまだ使ったわけではありません |
 | 連携 | 🟠 | CM5 のテストベンチで他のサービスと一緒に動作し、メッセージは SDK の共通契約に従います |
@@ -83,6 +83,9 @@ GPL-3.0-or-later - see LICENSE
 * 🎚️ **音声操作ごとのリスクレベル(ファイル):** 状態の問い合わせは情報提供、停止は直ちに応答されます。ミッション開始と帰還は動作であり、常に確認が必要です。表は `HYDRA_UMC_VOICE_UI_RISK_FILE`(既定は `/etc/hydra-umc/voice-ui-risk.json`、例は `deploy/voice-ui-risk.json.example`)から読み込まれ、既定をより厳しくする方向にのみ変更できます。操作を緩める項目は無視され、ファイルが無い、または壊れている場合は既定のままです。
 * 🔏 **確認は依頼した本人のためのもので、確認済みの結果は検証できます：** ターンは `subject`（HYDRA-UMC-SERVER が中継するサインイン中のユーザー）を指定でき、署名付きの確認トークンがそれを保持して、同じ subject に対してのみ確認します（拒否してもトークンは消費されません）。確認済みの結果には `subject`、`confirmedAtUtc`、使い切りの `nonce` も含まれ、`HYDRA_UMC_VOICE_UI_RESULT_KEY`（16 文字以上、HYDRA-UMC-SERVER が持つものと同じ値）が設定されていれば、サーバーが結果を信じる前に検証する HMAC-SHA256 の `signature` が付きます。`HYDRA_UMC_VOICE_UI_REQUIRE_SUBJECT=1` にすると、誰も指定しないターンや確認も拒否します（既定はオフ）。*（実装済み）*
 * 🙈 **応答は話された内容を繰り返しません（サーバー設定）：** 既定では、応答の解釈には一致したルールだけが載ります。`HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT=1` を設定すると文字起こし（`heardText`、`normalizedText`）が加わります。これは個人データです。制限：ルールは英語のみを理解し、ターンの `locale` は検証されますが使われません。 サーバーも Server Admin 画面から、ターンごとにこれ(および最小信頼度)を設定できます。このサービスの環境変数がサーバーより優先されます。
+* 🗣️ **ウェイクワード、プッシュトゥトーク、話者識別（任意、すべて既定でオフ）：** `wake.enabled` では、ターンは設定ファイルのウェイクフレーズで始まるか、ボタン（`activation: push_to_talk`）またはデバイスからの通知（`wake_word`）が必要です。音声の停止はサイトが求めない限り不要です。`speaker.enabled` では、音声ベクトルを登録したオペレーターに対してのみ動作が要求されます（ベクトルはデバイスで作られ、音声そのものではありません。ローカルの 1 ファイルに保存され、要求で削除され、どこにも送信されません）。メイン機器の確認は引き続き必要です。設定は `voice-ui.json`（例は `deploy/voice-ui.json.example`）。*（サービス側は模擬ベクトルでテスト済み。ウォッチ側は未対応）*
+* ❓ **エラーコードに関する質問（任意）：** 「エラー 0x05 とは」は 8 言語で理解され、HYDRA-UMC-DOCS-QA から読み取り専用で、文書の出典付きで回答されます。項目がない場合は推測せずその旨を答えます。既定でオフ（`queries.enabled`）。
+* 📜 **監査ログと読み上げ警報（任意）：** `audit.enabled` はコマンドごとに 1 行（リクエスト ID、意図、結果、確認、鍵付きハッシュとしての本人。テキスト、音声、音声ベクトル、アドレスは含みません）を書き、サイズ上限とローテーションがあり、サーバーは `GET /v1/voice/audit` で読めます。`alerts.enabled` は、システム状態のテキストと異常判定について `POST /v1/voice/alert` の文を作り、重大度のしきい値があり、繰り返しません。音を出すのはデバイスです。
 * 🛡️ **ノイズキャンセリング：** 高い環境ノイズを伴う産業環境向けに最適化。*（計画中）*
 * 👨‍👩‍👧 **認知 AI ノードの子プロジェクト：**
   [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE) の下で 4 つの兄弟サービスの 1 つとして動作します（VLA-Engine、Semantic-Planner、Docs-QA と並んで）。独自のコピーを保持するのではなく、親プロジェクトの HydraOS イメージとモデルの重みを共有します。
@@ -156,7 +159,7 @@ Python 3.10 以上が必要です。
 
 ## 🧪 テスト
 
-`python -m pytest -q tests` で自動テスト 337 件を実行します。 ハードウェアも、このマシンの外にあるものも必要ありません。
+`python -m pytest -q tests` で自動テスト 397 件を実行します。 ハードウェアも、このマシンの外にあるものも必要ありません。
 
 CI は `HYDRA_UMC_CI=1 python tools/ci_validate.py` を実行し、マニフェスト、文書、8 つの README、図を検査します。
 

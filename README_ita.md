@@ -18,7 +18,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/STT-Whisper%20Local-FF6F00.svg" alt="STT">
   <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/Tests-337%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-397%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.1-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
@@ -35,7 +35,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | Versione | `0.2.1` |
 | Maturità | Funzionale |
-| Test | 337 (`python -m pytest -q tests`) |
+| Test | 397 (`python -m pytest -q tests`) |
 | Tecnologia | Python / Rule-based intent parser / Energy-gate VAD |
 | Destinazione | Il Raspberry Pi CM5 di una cella HYDRA-UMC |
 | Su hardware reale | Non ancora: per questa versione non risulta alcuna esecuzione su hardware reale |
@@ -51,7 +51,7 @@ Ogni riga è una parte di questo repository e il semaforo dice a che punto è og
 | Area | Stato | Cosa significa qui |
 |---|---|---|
 | Software | 🟡 | Funziona per il suo scopo principale; la verifica di onestà qui sopra elenca ciò che manca ancora |
-| Test | 🟢 | 337 test automatici, eseguiti a ogni modifica |
+| Test | 🟢 | 397 test automatici, eseguiti a ogni modifica |
 | Hardware reale | 🔴 | Non ancora: per questa versione non risulta alcuna esecuzione su hardware reale |
 | Interfaccia e protocolli | 🟡 | Le rotte o i messaggi offerti sono documentati e provati con un client; non tutti i client li hanno ancora usati |
 | Integrazione | 🟠 | Funziona insieme agli altri servizi sul banco prova CM5 e i suoi messaggi seguono i contratti condivisi dell'SDK |
@@ -79,6 +79,9 @@ Consente agli operatori di controllare le missioni robotiche, interrogare lo sta
 * 🎚️ **Livello di rischio di ogni azione vocale (un file):** una richiesta di stato è informativa e un arresto riceve risposta subito; avviare una missione e tornare alla base sono movimenti e richiedono sempre una conferma. La tabella si legge da `HYDRA_UMC_VOICE_UI_RISK_FILE` (predefinito `/etc/hydra-umc/voice-ui-risk.json`, esempio in `deploy/voice-ui-risk.json.example`) e può solo irrigidire il predefinito: una voce che abbassa un'azione viene ignorata, e un file assente o rotto lascia il predefinito.
 * 🔏 **Una conferma vale per chi ha chiesto, e un risultato confermato si può verificare:** un turno può indicare il proprio `subject` (l'utente autenticato per cui HYDRA-UMC-SERVER lo inoltra); il token di conferma firmato lo porta e conferma solo per lo stesso soggetto (un rifiuto non consuma il token). Un risultato confermato porta anche `subject`, `confirmedAtUtc` e il `nonce` monouso e, se `HYDRA_UMC_VOICE_UI_RESULT_KEY` (16 caratteri o più, lo stesso valore di HYDRA-UMC-SERVER) è impostata, una `signature` HMAC-SHA256 che il server verifica prima di credere al risultato. `HYDRA_UMC_VOICE_UI_REQUIRE_SUBJECT=1` rifiuta inoltre un turno o una conferma che non nomina nessuno (disattivato per impostazione predefinita). *(implementato)*
 * 🙈 **La risposta non ripete ciò che è stato detto (impostazione del server):** per impostazione predefinita l'interpretazione di una risposta elenca solo le regole riconosciute; `HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT=1` aggiunge la trascrizione (`heardText`, `normalizedText`), che è un dato personale. Limiti: le regole capiscono solo l'inglese e il `locale` di un turno viene controllato ma non usato. Il Server può impostarlo (e la confidenza minima) a ogni turno anche dalla sua schermata Server Admin; l'ambiente di questo servizio prevale sul Server.
+* 🗣️ **Parola di attivazione, push-to-talk e identificazione del parlante (opzionali, tutto spento per impostazione predefinita):** con `wake.enabled` un turno deve iniziare con una frase di attivazione del file di configurazione, con il pulsante (`activation: push_to_talk`) o annunciato dal dispositivo (`wake_word`); uno stop parlato non la richiede a meno che il sito lo chieda. Con `speaker.enabled` un movimento viene richiesto solo per un operatore che ha registrato un vettore vocale (creato sul dispositivo, mai audio; conservato in un file locale, dimenticato su richiesta e non inviato altrove); la conferma del dispositivo principale resta necessaria. Impostazioni in `voice-ui.json` (esempio in `deploy/voice-ui.json.example`). *(lato servizio provato con vettori simulati; il lato orologio è ancora da fare)*
+* ❓ **Domande sui codici di errore (opzionale):** «cosa significa l'errore 0x05» è compresa nelle otto lingue e riceve risposta in sola lettura da HYDRA-UMC-DOCS-QA con la citazione del documento; se non c'è una voce, la risposta lo dice invece di indovinare. Spento per impostazione predefinita (`queries.enabled`).
+* 📜 **Registro di audit e avvisi letti ad alta voce (opzionali):** `audit.enabled` scrive una riga per comando (id della richiesta, intento, esito, conferma e la persona come hash con chiave; mai il testo, l'audio, il vettore vocale o un indirizzo) con un tetto di dimensione e rotazione, leggibile dal server con `GET /v1/voice/audit`. `alerts.enabled` compone le frasi di `POST /v1/voice/alert` per i testi dello stato del sistema e i verdetti di anomalia, con soglia di gravità e senza ripetizioni; il suono lo produce il dispositivo.
 * 🛡️ **Cancellazione del rumore:** Ottimizzato per ambienti industriali con elevato rumore ambientale. *(pianificato)*
 * 👨‍👩‍👧 **Figlio del Cognitive AI Node:** Gira come uno dei quattro
   servizi fratelli sotto [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE)
@@ -213,7 +216,7 @@ Richiede Python 3.10 o successivo.
 
 ## 🧪 Test
 
-337 test automatici si eseguono con `python -m pytest -q tests`. Non richiedono hardware né nulla al di fuori di questa macchina.
+397 test automatici si eseguono con `python -m pytest -q tests`. Non richiedono hardware né nulla al di fuori di questa macchina.
 
 La CI esegue `HYDRA_UMC_CI=1 python tools/ci_validate.py`, che controlla il manifesto, i documenti, gli otto README e le immagini.
 

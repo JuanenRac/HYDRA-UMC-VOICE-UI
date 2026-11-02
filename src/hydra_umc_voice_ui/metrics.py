@@ -18,7 +18,7 @@ from collections import Counter
 from . import __version__
 
 # the closed list of values a label may take, so a turn can never put free text in a metric
-INTENT_LABELS = ("start_mission", "stop", "status", "go_home", "none")
+INTENT_LABELS = ("start_mission", "stop", "status", "go_home", "query_error", "none")
 REFUSALS = ("unauthorized", "rate_limited", "bad_request", "too_large")
 
 

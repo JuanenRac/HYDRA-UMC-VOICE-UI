@@ -22,6 +22,8 @@ INTENT_START_MISSION = "start_mission"
 INTENT_STOP = "stop"
 INTENT_STATUS = "status"
 INTENT_GO_HOME = "go_home"
+# a question about an error code: read only, answered from the documentation (queries.py)
+INTENT_QUERY_ERROR = "query_error"
 
 
 @dataclass(frozen=True)
@@ -142,6 +144,7 @@ def classify_intent(text: str) -> IntentClassification:
     """
     # the phrases of the seven other languages are an addition (see intent_languages.py); imported here because that module needs the names above
     from .intent_languages import is_negated, language_matches
+    from .queries import query_matches
 
     normalized = normalize_text(text)
     matches: list[Intent] = []
@@ -158,6 +161,11 @@ def classify_intent(text: str) -> IntentClassification:
             matches.append(Intent(name=name, entities=entities))
         elif len(entities) > len(matches[known].entities):
             matches[known] = Intent(name=name, entities=entities)   # the same command, said with more detail (a robot number the English rule did not read)
+    question = query_matches(plain)
+    if question is not None:
+        # "what does the status 0x05 mean" asks about a code; it is not a request for the status of the robot
+        matches = [match for match in matches if match.name != INTENT_STATUS]
+        matches.append(Intent(name=INTENT_QUERY_ERROR, entities=question))
     return IntentClassification(
         matches=tuple(matches),
         negated=bool(matches) and (_NEGATION.search(plain) is not None or is_negated(plain)),

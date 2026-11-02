@@ -1,0 +1,36 @@
+{
+  "wake": {
+    "enabled": false,
+    "phrases": ["hydra"],
+    "allowPushToTalk": true,
+    "stopNeedsWake": false
+  },
+  "speaker": {
+    "enabled": false,
+    "storeFile": "/var/lib/hydra-umc/voice-ui-speakers.json",
+    "threshold": 0.85,
+    "margin": 0.05,
+    "maxSpeakers": 16
+  },
+  "queries": {
+    "enabled": false,
+    "docsQaUrl": "http://127.0.0.1:8110",
+    "tokenFile": "",
+    "timeoutSeconds": 3.0,
+    "maxAnswerChars": 400
+  },
+  "audit": {
+    "enabled": false,
+    "file": "/var/lib/hydra-umc/voice-ui-audit.jsonl",
+    "maxBytes": 1048576,
+    "maxFiles": 5,
+    "storeSubjectPlain": false
+  },
+  "alerts": {
+    "enabled": false,
+    "minSeverity": "warning",
+    "repeatSeconds": 60,
+    "criticalRepeatSeconds": 10,
+    "maxChars": 200
+  }
+}

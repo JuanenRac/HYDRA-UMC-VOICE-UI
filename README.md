@@ -18,7 +18,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/STT-Whisper%20Local-FF6F00.svg" alt="STT">
   <img src="https://img.shields.io/badge/Platform-Hailo--10-green.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/Tests-337%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-397%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.1-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
@@ -35,7 +35,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | Version | `0.2.1` |
 | Maturity | Functional |
-| Tests | 337 (`python -m pytest -q tests`) |
+| Tests | 397 (`python -m pytest -q tests`) |
 | Stack | Python / Rule-based intent parser / Energy-gate VAD |
 | Target | The Raspberry Pi CM5 of a HYDRA-UMC cell |
 | On real hardware | Not yet: no run on real hardware is recorded for this version |
@@ -51,7 +51,7 @@ Each line is one part of this repository and the light says how far it is today.
 | Area | State | What it means here |
 |---|---|---|
 | Software | 🟡 | Works for its main purpose; the honesty check above lists what is still missing |
-| Tests | 🟢 | 337 automated tests, run on every change |
+| Tests | 🟢 | 397 automated tests, run on every change |
 | Real hardware | 🔴 | Not yet: no run on real hardware is recorded for this version |
 | Interface and protocols | 🟡 | The routes or messages it offers are documented and tested with a client; not every client has used them yet |
 | Integration | 🟠 | It runs together with the other services on the CM5 test bench and its messages follow the shared contracts of the SDK |
@@ -79,6 +79,9 @@ It allows operators to control robotic missions, query system status, and receiv
 * 🎚️ **Risk level of each spoken action (a file):** a status request is informative and a stop is answered at once; starting a mission and going home are movements and always need a confirmation. The table is read from `HYDRA_UMC_VOICE_UI_RISK_FILE` (default `/etc/hydra-umc/voice-ui-risk.json`, example in `deploy/voice-ui-risk.json.example`) and can only make the default stricter: an entry that lowers an action is ignored, and a missing or broken file leaves the default.
 * 🔏 **A confirmation is for the person who asked, and a confirmed result can be verified:** a turn may name its `subject` (the signed-in user that HYDRA-UMC-SERVER relays it for); the signed confirmation token carries it and confirms only for that same subject (a refusal does not use the token up). A confirmed result also carries `subject`, `confirmedAtUtc` and the one-use `nonce`, and, when `HYDRA_UMC_VOICE_UI_RESULT_KEY` (16 characters or more, the same value HYDRA-UMC-SERVER holds) is set, an HMAC-SHA256 `signature` the server checks before it believes the result. `HYDRA_UMC_VOICE_UI_REQUIRE_SUBJECT=1` also refuses a turn or a confirmation that names nobody (off by default). *(implemented)*
 * 🙈 **The reply does not repeat what was said (server setting):** by default the interpretation of a reply lists only the rules that matched; `HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT=1` adds the transcript (`heardText`, `normalizedText`), which is personal data. Limits: the rules understand English only, and the `locale` of a turn is checked but not used. The Server can also set it (and the minimum confidence) for every turn from its Server Admin screen; the environment of this service wins over the Server.
+* 🗣️ **Wake word, push-to-talk and speaker identification (optional, all off by default):** with `wake.enabled` a turn must start with a wake phrase of the configuration file, with the button (`activation: push_to_talk`) or announced by the device (`wake_word`); a spoken stop needs none unless the site asks for it. With `speaker.enabled` a movement is only requested for an operator who enrolled a voice vector (made on the device, never audio; kept in one local file, forgotten on request and never sent anywhere); the confirmation of the primary device is still required. Settings in `voice-ui.json` (example in `deploy/voice-ui.json.example`). *(service side tested with simulated vectors; the watch side is still pending)*
+* ❓ **Questions about error codes (optional):** "what does error 0x05 mean" is understood in the eight languages and answered, read only, from HYDRA-UMC-DOCS-QA with the citation of the document; when there is no entry the answer says so instead of guessing. Off by default (`queries.enabled`).
+* 📜 **Audit log and alerts read aloud (optional):** `audit.enabled` writes one line per command (request id, intent, outcome, confirmation and the person as a keyed hash; never the text, the audio, the voice vector or an address) with a size ceiling and rotation, readable by the server at `GET /v1/voice/audit`. `alerts.enabled` composes the sentences of `POST /v1/voice/alert` for system-status texts and anomaly verdicts, with a severity threshold and no repeats; the device makes the sound.
 * 🛡️ **Noise Cancellation:** Optimized for industrial environments with high ambient noise. *(planned)*
 * 👨‍👩‍👧 **Cognitive AI Node Child:** Runs as one of four sibling services
   under [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE)
@@ -204,7 +207,7 @@ Requires Python 3.10 or newer.
 
 ## 🧪 Testing
 
-337 automated tests run with `python -m pytest -q tests`. They need no hardware and nothing outside this machine.
+397 automated tests run with `python -m pytest -q tests`. They need no hardware and nothing outside this machine.
 
 The CI runs `HYDRA_UMC_CI=1 python tools/ci_validate.py`, which checks the manifest, the documents, the eight READMEs and the pictures.
 

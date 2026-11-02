@@ -27,7 +27,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .intent import INTENT_GO_HOME, INTENT_START_MISSION, INTENT_STATUS, INTENT_STOP
+from .intent import INTENT_GO_HOME, INTENT_QUERY_ERROR, INTENT_START_MISSION, INTENT_STATUS, INTENT_STOP
 
 LEVEL_INFORMATIVE = "informative"
 LEVEL_STOP = "stop"
@@ -39,6 +39,7 @@ LEVELS: tuple[str, ...] = (LEVEL_INFORMATIVE, LEVEL_STOP, LEVEL_MOVEMENT)
 # the restrictive default, and the floor under which a file cannot go
 DEFAULT_LEVELS: dict[str, str] = {
     INTENT_STATUS: LEVEL_INFORMATIVE,
+    INTENT_QUERY_ERROR: LEVEL_INFORMATIVE,
     INTENT_STOP: LEVEL_STOP,
     INTENT_START_MISSION: LEVEL_MOVEMENT,
     INTENT_GO_HOME: LEVEL_MOVEMENT,

@@ -36,13 +36,14 @@ import json
 import os
 import secrets
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta, timezone
 import re
 
 from .messages import language_of, message
 from .intent import (
     INTENT_GO_HOME,
+    INTENT_QUERY_ERROR,
     INTENT_START_MISSION,
     INTENT_STATUS,
     INTENT_STOP,
@@ -50,7 +51,10 @@ from .intent import (
     classify_intent,
     normalize_text,
 )
+from .queries import DocsQaClient
 from .risk import LEVEL_MOVEMENT, RiskTable, load_risk_table
+from .speaker import SpeakerStore
+from .voice_config import VoiceConfig, WakeConfig, load_voice_config
 
 MAX_TRANSCRIPT_LENGTH = 500
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -113,6 +117,8 @@ def include_heard_text_default(environ: dict[str, str] | None = None) -> bool:
     return env.get(HEARD_TEXT_ENV, "").strip() == "1"
 
 
+ACTIVATION_MODES = ("push_to_talk", "wake_word")
+MAX_VOICE_VECTOR_LENGTH = 512
 SUBJECT_PATTERN = re.compile(r"^[A-Za-z0-9_.@:+-]{1,128}$")
 REQUIRE_SUBJECT_ENV = "HYDRA_UMC_VOICE_UI_REQUIRE_SUBJECT"
 RESULT_KEY_ENV = "HYDRA_UMC_VOICE_UI_RESULT_KEY"
@@ -304,6 +310,11 @@ class VoiceTurn:
     # environment of this service, then the built-in default, decide. The environment of this service always wins.
     include_heard_text: bool | None = None
     min_confidence: float | None = None
+    # how the person started speaking: "push_to_talk" (a button) or "wake_word" (the device heard the wake word itself); None: not said
+    activation: str | None = None
+    # the voice of the speaker as a vector of numbers made on the device (never audio); only compared with the enrolled operators when
+    # speaker identification is on, and never repeated in a reply, a log or an audit record
+    speaker_vector: list[float] | None = field(default=None, repr=False)
 
     @classmethod
     def from_payload(cls, payload: object) -> "VoiceTurn":
@@ -348,7 +359,21 @@ class VoiceTurn:
                 if isinstance(wanted, bool) or not isinstance(wanted, (int, float)) or not 0.0 <= wanted <= 1.0:
                     raise VoiceTurnValidationError("options.minConfidence must be a number from 0 to 1")
                 min_confidence = float(wanted)
+        activation = payload.get("activation")
+        if isinstance(activation, dict):
+            activation = activation.get("mode")
+        if activation is not None and activation not in ACTIVATION_MODES:
+            raise VoiceTurnValidationError(f"activation must be one of {', '.join(ACTIVATION_MODES)}")
+        speaker_vector = payload.get("speakerVector")
+        if speaker_vector is not None and (
+            not isinstance(speaker_vector, list)
+            or len(speaker_vector) > MAX_VOICE_VECTOR_LENGTH
+            or not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in speaker_vector)
+        ):
+            raise VoiceTurnValidationError(f"speakerVector must be a list of at most {MAX_VOICE_VECTOR_LENGTH} numbers")
         return cls(
+            activation=activation,
+            speaker_vector=None if speaker_vector is None else [float(v) for v in speaker_vector],
             request_id=request_id,
             transcript=transcript.strip(),
             locale=locale,
@@ -385,6 +410,10 @@ class AssistantReply:
     message_code: str | None = None
     message_params: dict[str, str] | None = None
     text_language: str | None = None
+    # where an answer from the documentation came from (the citations), only on the answer to a question about a code
+    sources: tuple[str, ...] = ()
+    # "verified" or "unknown" when the voice of the speaker was checked for this turn (speaker identification on); None otherwise
+    speaker: str | None = None
 
     @property
     def visual_state(self) -> str:
@@ -416,6 +445,10 @@ class AssistantReply:
             payload["textLanguage"] = self.text_language
         if self.intent is not None:
             payload["intent"] = {"name": self.intent.name, "entities": self.intent.entities}
+        if self.sources:
+            payload["sources"] = list(self.sources)
+        if self.speaker is not None:
+            payload["speaker"] = {"checked": True, "verified": self.speaker == "verified"}
         if self.interpretation is not None:
             payload["interpretation"] = self.interpretation
         if self.pending_confirmation is not None:
@@ -432,6 +465,9 @@ def process_voice_turn(
     include_heard_text: bool | None = None,
     min_confidence: float | None = None,
     risk_table: RiskTable | None = None,
+    voice_config: VoiceConfig | None = None,
+    speakers: SpeakerStore | None = None,
+    query_client: DocsQaClient | None = None,
 ) -> AssistantReply:
     """Parse one Watch request and return an honest, non-actuating reply.
 
@@ -477,6 +513,13 @@ def process_voice_turn(
         else:
             min_confidence = min_confidence_default()
     now = now if now is not None else datetime.now(timezone.utc)
+    config = voice_config if voice_config is not None else load_voice_config()
+    # the wake word (optional, off by default): the phrase is taken off the start of what was heard
+    activated = True
+    if config.wake.enabled:
+        stripped, activated = _activation(turn, config.wake)
+        if stripped != turn.transcript and stripped:
+            turn = replace(turn, transcript=stripped)
     classification = classify_intent(turn.transcript)
     language = language_of(turn.locale)
 
@@ -494,6 +537,19 @@ def process_voice_turn(
         interpretation["heardText"] = turn.transcript
         interpretation["normalizedText"] = normalize_text(turn.transcript)
     interpretation["matchedRules"] = sorted({match.name for match in classification.matches})
+    if not activated:
+        # without the wake word nothing is done, except a spoken stop (it costs nothing if it was a mistake) unless the site asks for the word too
+        is_stop = classification.is_unambiguous and not classification.negated and classification.matches[0].name == INTENT_STOP
+        if not (is_stop and not config.wake.stop_needs_wake):
+            return AssistantReply(
+                request_id=turn.request_id,
+                **said("not_activated"),
+                level="ATTENTION",
+                speak=True,
+                requires_confirmation=False,
+                intent=None,
+                interpretation=interpretation,
+            )
     if classification.negated:
         return AssistantReply(
             request_id=turn.request_id,
@@ -540,6 +596,31 @@ def process_voice_turn(
             interpretation=interpretation,
         )
 
+    if intent.name == INTENT_QUERY_ERROR and not risk.requires_confirmation(INTENT_QUERY_ERROR):
+        code = intent.entities.get("code", "")
+        sources: tuple[str, ...] = ()
+        if not config.queries.enabled:
+            spoken_query: dict[str, Any] = said("query_off")
+        else:
+            answer = (query_client or DocsQaClient(config.queries)).ask(code)
+            sources = answer.sources
+            if answer.status == "answered":
+                spoken_query = said("query_answer", errcode=code, answer=answer.text)
+            elif answer.status == "not_found":
+                spoken_query = said("query_not_found", errcode=code)
+            else:
+                spoken_query = said("query_unavailable", errcode=code)
+        return AssistantReply(
+            request_id=turn.request_id,
+            **spoken_query,
+            level="ATTENTION",
+            speak=True,
+            requires_confirmation=False,
+            intent=intent,
+            interpretation=interpretation,
+            sources=sources,
+        )
+
     if intent.name in (INTENT_START_MISSION, INTENT_GO_HOME) and turn.confidence is not None and turn.confidence < min_confidence:
         return AssistantReply(
             request_id=turn.request_id,
@@ -550,6 +631,27 @@ def process_voice_turn(
             intent=None,
             interpretation=interpretation,
         )
+
+    # who is speaking (optional, off by default): a movement is only requested for an enrolled operator. A stop is never held back by it.
+    token_subject = turn.subject
+    speaker_state: str | None = None
+    if config.speaker.enabled and intent.name != INTENT_STOP and risk.requires_confirmation(intent.name):
+        store = speakers or SpeakerStore(
+            config.speaker.store_file, threshold=config.speaker.threshold, margin=config.speaker.margin, max_speakers=config.speaker.max_speakers
+        )
+        who = store.identify(turn.speaker_vector) if turn.speaker_vector is not None else None
+        if who is None or (turn.subject and turn.subject != who):
+            return AssistantReply(
+                request_id=turn.request_id,
+                **said("speaker_not_authorised"),
+                level="WARNING",
+                speak=True,
+                requires_confirmation=False,
+                intent=None,
+                interpretation=interpretation,
+                speaker="unknown",
+            )
+        token_subject, speaker_state = who, "verified"
 
     if intent.name == INTENT_START_MISSION:
         mission = intent.entities.get("mission_id") or message("default_mission", turn.locale)
@@ -582,9 +684,23 @@ def process_voice_turn(
         speak=True,
         requires_confirmation=True,
         intent=intent,
-        pending_confirmation=PendingConfirmation.issue(turn.request_id, intent, now, turn.subject),
+        pending_confirmation=PendingConfirmation.issue(turn.request_id, intent, now, token_subject),
         interpretation=interpretation,
+        speaker=speaker_state,
     )
+
+
+def _activation(turn: VoiceTurn, wake: WakeConfig) -> tuple[str, bool]:
+    """(what was said without the wake word, whether the turn was started on purpose). A turn started with the button or announced by the
+    device as a wake word counts; otherwise the sentence has to begin with one of the wake phrases, which is then taken off."""
+    if (turn.activation == "push_to_talk" and wake.allow_push_to_talk) or turn.activation == "wake_word":
+        return turn.transcript, True
+    heard = turn.transcript.lstrip(" \t,.;:!?-")
+    lowered = heard.lower()
+    for phrase in wake.phrases:
+        if lowered.startswith(phrase) and (len(heard) == len(phrase) or not heard[len(phrase)].isalnum()):
+            return heard[len(phrase):].lstrip(" \t,.;:!?-"), True
+    return turn.transcript, False
 
 
 @dataclass(frozen=True)
