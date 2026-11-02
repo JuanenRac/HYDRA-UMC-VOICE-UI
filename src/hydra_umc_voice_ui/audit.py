@@ -136,7 +136,7 @@ class AuditLog:
         keyfile = self.hmac_path()
         try:
             text = keyfile.read_text(encoding="ascii").strip()
-        except FileNotFoundError:
+        except (FileNotFoundError, NotADirectoryError):
             try:
                 keyfile.parent.mkdir(parents=True, exist_ok=True)
                 key = secrets.token_bytes(32)
