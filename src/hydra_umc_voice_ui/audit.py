@@ -213,7 +213,7 @@ class AuditLog:
             return False
         stamp = (now or datetime.now(timezone.utc)).astimezone(timezone.utc).isoformat(timespec="seconds")
         try:
-            record = {
+            record: dict[str, object] = {
                 "ts": stamp,
                 "event": event if event in ("turn", "confirm") else "turn",
                 "requestId": request_id or "",
