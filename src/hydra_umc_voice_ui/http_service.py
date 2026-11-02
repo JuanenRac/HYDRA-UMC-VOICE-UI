@@ -119,7 +119,7 @@ class VoiceGatewayHandler(BaseHTTPRequestHandler):
                 self.server.metrics.refused("unauthorized")
                 self._write_json(HTTPStatus.UNAUTHORIZED, {"error": "valid bearer token required"})
                 return
-            self._write_text(HTTPStatus.OK, self.server.metrics.render())
+            self._write_text(HTTPStatus.OK, self.server.metrics.render(self.server.audit.status()))
             return
         if urlparse(self.path).path == "/v1/voice/audit":
             # the most recent audit records, for the server to collect; behind the token, and refused when there is no token to check
@@ -148,6 +148,7 @@ class VoiceGatewayHandler(BaseHTTPRequestHandler):
             "voiceTurnEndpoint": "/v1/voice/turn",
             "voiceConfirmEndpoint": "/v1/voice/confirm",
             "authRequired": bool(self.server.token),
+            "audit": self.server.audit.status(),
         })
 
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API name

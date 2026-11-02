@@ -8,13 +8,14 @@
 Everything here is a switch or a value that can be tuned, so it lives in a file and not in the code. The file is
 `HYDRA_UMC_VOICE_UI_CONFIG` (default `/etc/hydra-umc/voice-ui.json`); a missing file means the defaults. Example in `deploy/voice-ui.json.example`.
 
-Every optional feature is OFF in the defaults: the service behaves as it always did until somebody turns one on.
+Every optional feature is OFF in the defaults except the audit log, which is ON (with a size ceiling and rotation) and can be switched off with
+`audit.enabled`: the service behaves as it always did until somebody turns the others on.
 
     {
       "wake":    {"enabled": false, "phrases": ["hydra"], "allowPushToTalk": true, "stopNeedsWake": false},
       "speaker": {"enabled": false, "storeFile": "/var/lib/hydra-umc/voice-ui-speakers.json", "threshold": 0.85, "margin": 0.05, "maxSpeakers": 16},
       "queries": {"enabled": false, "docsQaUrl": "http://127.0.0.1:8110", "tokenFile": "", "timeoutSeconds": 3.0, "maxAnswerChars": 400},
-      "audit":   {"enabled": false, "file": "/var/lib/hydra-umc/voice-ui-audit.jsonl", "maxBytes": 1048576, "maxFiles": 5, "storeSubjectPlain": false},
+      "audit":   {"enabled": true, "file": "/var/lib/hydra-umc/voice-ui-audit.jsonl", "maxBytes": 1048576, "maxFiles": 5, "storeSubjectPlain": false},
       "alerts":  {"enabled": false, "minSeverity": "warning", "repeatSeconds": 60, "criticalRepeatSeconds": 10, "maxChars": 200}
     }
 
@@ -65,7 +66,7 @@ class QueryConfig:
 
 @dataclass(frozen=True)
 class AuditConfig:
-    enabled: bool = False
+    enabled: bool = True
     file: str = "/var/lib/hydra-umc/voice-ui-audit.jsonl"
     max_bytes: int = 1024 * 1024
     max_files: int = 5

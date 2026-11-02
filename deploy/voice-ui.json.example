@@ -20,7 +20,7 @@
     "maxAnswerChars": 400
   },
   "audit": {
-    "enabled": false,
+    "enabled": true,
     "file": "/var/lib/hydra-umc/voice-ui-audit.jsonl",
     "maxBytes": 1048576,
     "maxFiles": 5,

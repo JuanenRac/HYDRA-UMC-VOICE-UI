@@ -48,7 +48,7 @@ class Metrics:
         with self._lock:
             self._refusals[reason if reason in REFUSALS else "bad_request"] += 1
 
-    def render(self) -> str:
+    def render(self, audit: dict[str, object] | None = None) -> str:
         with self._lock:
             turns, refusals = dict(self._turns), dict(self._refusals)
             confirmations, requests = self._confirmations, self._confirmation_requests
@@ -74,4 +74,19 @@ class Metrics:
             "# TYPE hydra_umc_voice_ui_refused_total counter",
         ]
         lines += [f'hydra_umc_voice_ui_refused_total{{reason="{reason}"}} {refusals.get(reason, 0)}' for reason in REFUSALS]
+        if audit is not None:
+            enabled = bool(audit.get("enabled"))
+            writable = 1 if not enabled else int(bool(audit.get("writable")))
+            errors = audit.get("writeErrors")
+            lines += [
+                "# HELP hydra_umc_voice_ui_audit_enabled 1 when the voice audit log is switched on.",
+                "# TYPE hydra_umc_voice_ui_audit_enabled gauge",
+                f"hydra_umc_voice_ui_audit_enabled {int(enabled)}",
+                "# HELP hydra_umc_voice_ui_audit_writable 1 when the last audit record was written (or none was tried yet), 0 when it could not be.",
+                "# TYPE hydra_umc_voice_ui_audit_writable gauge",
+                f"hydra_umc_voice_ui_audit_writable {writable}",
+                "# HELP hydra_umc_voice_ui_audit_write_errors_total Audit records that could not be written.",
+                "# TYPE hydra_umc_voice_ui_audit_write_errors_total counter",
+                f"hydra_umc_voice_ui_audit_write_errors_total {errors if isinstance(errors, int) else 0}",
+            ]
         return "\n".join(lines) + "\n"

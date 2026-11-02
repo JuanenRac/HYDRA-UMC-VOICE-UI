@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **Changed: the audit log of the voice commands is now ON by default** (`audit.enabled` was off). It keeps its size ceiling (`maxBytes`, 1 MB) and rotation (`maxFiles`, 5 files), writes the person only as a keyed hash and never the transcript, audio, voice vector, locale or address; set `"audit": {"enabled": false}` in the configuration file to switch it off, and `audit.file` to put it elsewhere. The key of the hash is created the first time, beside the log and outside the repository, readable only by its owner.
+- **The audit log says when it cannot be written:** `GET /health` carries `audit` (`enabled`, `writable`, `writeErrors`) and `GET /metrics` adds `hydra_umc_voice_ui_audit_enabled`, `hydra_umc_voice_ui_audit_writable` and `hydra_umc_voice_ui_audit_write_errors_total`. A full disk or a missing permission never stops a command, a stop above all.
+
 ## [0.2.2] - An activation phrase or push to talk, local speaker identification, error questions answered from the documentation, a voice audit log and spoken alerts
 
 - **A configuration file for the optional voice features** (`HYDRA_UMC_VOICE_UI_CONFIG`, default `/etc/hydra-umc/voice-ui.json`, example in `deploy/voice-ui.json.example`): wake word, speaker identification, questions about error codes, audit log and alerts read aloud, every one of them off until the file switches it on. A value that is not valid is ignored and reported, and a missing or broken file leaves everything off. The body limit of the service is 16 KB (it was 4 KB) so that a voice vector fits next to the text of a turn.

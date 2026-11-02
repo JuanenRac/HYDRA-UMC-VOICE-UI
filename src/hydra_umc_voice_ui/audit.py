@@ -11,8 +11,9 @@ a voice vector, the locale or an address.
 
 The person is written as a short keyed hash (`subject`), so the log shows that the same operator did two things without saying who they are;
 `storeSubjectPlain` writes the name instead, for a site that wants it. The log has a ceiling: one file grows to `maxBytes`, then it is rotated
-(`.1`, `.2`, ... up to `maxFiles` files in all) and the oldest is dropped, so the disk can never fill because of it. It is off by default
-(`audit.enabled`). A record that cannot be written never stops a voice command.
+(`.1`, `.2`, ... up to `maxFiles` files in all) and the oldest is dropped, so the disk can never fill because of it. It is ON by default
+(`audit.enabled` switches it off). A record that cannot be written never stops a voice command: the failure is counted and shown in
+`/health` and `/metrics` instead.
 """
 from __future__ import annotations
 
@@ -42,6 +43,7 @@ class AuditLog:
         self._lock = threading.Lock()
         self._salt: bytes | None = None
         self.write_errors = 0
+        self.writable = True  # False after a failed write, True again after the next one that works
 
     # a random key kept beside the log, so the same name gives the same short hash on this machine and on no other
     def _key(self) -> bytes:
@@ -111,10 +113,16 @@ class AuditLog:
                 descriptor = os.open(self.path, flags, 0o600)
                 with os.fdopen(descriptor, "ab") as stream:
                     stream.write(line)
+            self.writable = True
             return True
-        except OSError:
+        except Exception:  # noqa: BLE001 - whatever goes wrong, the voice command (a stop above all) must go on
             self.write_errors += 1
+            self.writable = False
             return False
+
+    def status(self) -> dict[str, object]:
+        """What the service says about its own audit log (no path, no content): switched on or off, whether the last write worked, errors so far."""
+        return {"enabled": self.config.enabled, "writable": self.writable if self.config.enabled else None, "writeErrors": self.write_errors}
 
     def tail(self, limit: int = 50) -> list[dict[str, object]]:
         """The most recent records (newest last), at most MAX_READ, for the server to collect."""

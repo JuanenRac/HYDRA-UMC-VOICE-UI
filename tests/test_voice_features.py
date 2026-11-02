@@ -53,7 +53,8 @@ def _voice(n: int, seed: int = 1) -> list[float]:
 
 def test_defaults_have_every_optional_feature_off() -> None:
     config = parse_voice_config({})
-    assert not (config.wake.enabled or config.speaker.enabled or config.queries.enabled or config.audit.enabled or config.alerts.enabled)
+    assert not (config.wake.enabled or config.speaker.enabled or config.queries.enabled or config.alerts.enabled)
+    assert config.audit.enabled and config.audit.max_bytes == 1024 * 1024 and config.audit.max_files == 5 and not config.audit.store_subject_plain
     assert config.problems == ()
 
 
@@ -320,8 +321,9 @@ def _audit(tmp_path: Path, **kw: object) -> AuditLog:
     return AuditLog(AuditConfig(enabled=True, file=str(tmp_path / "audit.jsonl"), **kw))  # type: ignore[arg-type]
 
 
-def test_audit_is_off_by_default_and_writes_nothing(tmp_path: Path) -> None:
-    log = AuditLog(AuditConfig(file=str(tmp_path / "audit.jsonl")))
+def test_audit_switched_off_writes_nothing(tmp_path: Path) -> None:
+    log = AuditLog(AuditConfig(enabled=False, file=str(tmp_path / "audit.jsonl")))
+    assert log.status() == {"enabled": False, "writable": None, "writeErrors": 0}
     assert log.record("turn", request_id="r", intent="stop", outcome="stop_now") is False
     assert not list(tmp_path.iterdir())
 
@@ -367,6 +369,20 @@ def test_a_log_that_cannot_be_written_never_stops_a_command(tmp_path: Path) -> N
     blocker.write_text("x", encoding="utf-8")
     log = AuditLog(AuditConfig(enabled=True, file=str(blocker / "sub" / "audit.jsonl")))
     assert log.record("turn", request_id="r", intent=None, outcome="no_match") is False and log.write_errors == 1
+    assert log.status() == {"enabled": True, "writable": False, "writeErrors": 1}
+    assert "audit" not in str(log.status().get("path", ""))
+
+
+def test_audit_failure_is_visible_in_health_and_metrics_and_never_blocks_a_stop(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    blocker = tmp_path / "file"
+    blocker.write_text("x", encoding="utf-8")
+    with _server(monkeypatch, tmp_path, {"audit": {"file": str(blocker / "sub" / "audit.jsonl")}}, token=None) as base:
+        stop = _call(f"{base}/v1/voice/turn", {"requestId": "r-2", "transcript": "stop", "locale": "en"})
+        assert stop[0] == 200 and stop[1]["intent"]["name"] == "stop"
+        health = json.loads(urllib.request.urlopen(f"{base}/health").read())  # noqa: S310 - local test server
+        assert health["audit"] == {"enabled": True, "writable": False, "writeErrors": 1}
+        metrics = urllib.request.urlopen(f"{base}/metrics").read().decode()  # noqa: S310
+        assert "hydra_umc_voice_ui_audit_writable 0" in metrics and "hydra_umc_voice_ui_audit_write_errors_total 1" in metrics
 
 
 # ---------------------------------------------------------------- alerts read aloud
@@ -488,7 +504,7 @@ def test_http_enrol_identify_forget_and_audit(monkeypatch: pytest.MonkeyPatch, t
 
 
 def test_http_features_off_by_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    with _server(monkeypatch, tmp_path, {}) as base:
+    with _server(monkeypatch, tmp_path, {"audit": {"enabled": False}}) as base:
         token = "t" * 20
         assert _call(f"{base}/v1/voice/speaker/enroll", {"subject": "ana", "vector": _voice(32, 1)}, token)[0] == 409
         assert _call(f"{base}/v1/voice/audit", token=token)[0] == 409
@@ -496,6 +512,14 @@ def test_http_features_off_by_default(monkeypatch: pytest.MonkeyPatch, tmp_path:
         assert status == 200 and reply["speak"] is False and reply["reason"] == "alerts_off" and reply["type"] == "assistant_alert"
         assert _call(f"{base}/v1/voice/alert", {"alertId": "x"}, token)[0] == 400
         assert not list(tmp_path.glob("*.jsonl"))
+
+
+def test_http_audit_is_on_by_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    with _server(monkeypatch, tmp_path, {"audit": {"file": str(tmp_path / "audit.jsonl")}}) as base:
+        token = "t" * 20
+        assert _call(f"{base}/v1/voice/turn", {"requestId": "r-1", "transcript": "status", "locale": "en"}, token)[0] == 200
+        records = _call(f"{base}/v1/voice/audit", token=token)[1]["records"]
+        assert [r["event"] for r in records] == ["turn"] and "transcript" not in json.dumps(records)
 
 
 def test_http_alerts_and_no_token_means_no_enrolment_or_audit_reading(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

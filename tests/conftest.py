@@ -13,3 +13,21 @@ import pytest
 @pytest.fixture(autouse=True)
 def _stop_confirmation_on(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("HYDRA_UMC_VOICE_UI_STOP_REQUIRES_CONFIRMATION", "1")
+
+
+@pytest.fixture(autouse=True)
+def _audit_log_in_a_temporary_folder(monkeypatch: pytest.MonkeyPatch, tmp_path: pytest.TempPathFactory) -> None:
+    """The audit log is on by default, so a server built without an explicit file must not write to the default system folder."""
+    from hydra_umc_voice_ui import http_service
+    from hydra_umc_voice_ui.audit import AuditLog
+    from hydra_umc_voice_ui.voice_config import AuditConfig
+
+    default_file = AuditConfig().file
+
+    class _TestAuditLog(AuditLog):
+        def __init__(self, config: AuditConfig) -> None:
+            if config.file == default_file:
+                config = AuditConfig(**{**config.__dict__, "file": str(tmp_path / "default-audit.jsonl")})
+            super().__init__(config)
+
+    monkeypatch.setattr(http_service, "AuditLog", _TestAuditLog)
