@@ -15,7 +15,8 @@ Every optional feature is OFF in the defaults except the audit log, which is ON 
       "wake":    {"enabled": false, "phrases": ["hydra"], "allowPushToTalk": true, "stopNeedsWake": false},
       "speaker": {"enabled": false, "storeFile": "/var/lib/hydra-umc/voice-ui-speakers.json", "threshold": 0.85, "margin": 0.05, "maxSpeakers": 16},
       "queries": {"enabled": false, "docsQaUrl": "http://127.0.0.1:8110", "tokenFile": "", "timeoutSeconds": 3.0, "maxAnswerChars": 400},
-      "audit":   {"enabled": true, "file": "/var/lib/hydra-umc/voice-ui-audit.jsonl", "maxBytes": 1048576, "maxFiles": 5, "storeSubjectPlain": false},
+      "audit":   {"enabled": true, "file": "/var/lib/hydra-umc/voice-ui-audit.jsonl", "maxBytes": 1048576, "maxFiles": 5, "storeSubjectPlain": false,
+                "transcriptHmac": true, "hmacKeyFile": "/var/lib/hydra-umc/voice-ui-audit-hmac.key"},
       "alerts":  {"enabled": false, "minSeverity": "warning", "repeatSeconds": 60, "criticalRepeatSeconds": 10, "maxChars": 200}
     }
 
@@ -71,6 +72,10 @@ class AuditConfig:
     max_bytes: int = 1024 * 1024
     max_files: int = 5
     store_subject_plain: bool = False
+    # Every record is signed with HMAC-SHA256 (ON by default). The key is a file outside the repository, made with restrictive permissions when it is
+    # missing and never printed; "" means a file beside the log (<file>.hmac.key). See audit.py for what happens when the key cannot be had.
+    transcript_hmac: bool = True
+    hmac_key_file: str = ""
 
 
 @dataclass(frozen=True)
@@ -194,7 +199,7 @@ def parse_voice_config(raw: object) -> VoiceConfig:
     )
 
     s = _section(raw, "audit", problems)
-    _unknown(s, ("enabled", "file", "maxBytes", "maxFiles", "storeSubjectPlain"), "audit", problems)
+    _unknown(s, ("enabled", "file", "maxBytes", "maxFiles", "storeSubjectPlain", "transcriptHmac", "hmacKeyFile"), "audit", problems)
     d4 = AuditConfig()
     audit = AuditConfig(
         enabled=_bool(s, "enabled", d4.enabled, problems, "audit"),
@@ -202,6 +207,8 @@ def parse_voice_config(raw: object) -> VoiceConfig:
         max_bytes=int(_number(s, "maxBytes", d4.max_bytes, 4096, 256 * 1024 * 1024, problems, "audit", whole=True)),
         max_files=int(_number(s, "maxFiles", d4.max_files, 1, 100, problems, "audit", whole=True)),
         store_subject_plain=_bool(s, "storeSubjectPlain", d4.store_subject_plain, problems, "audit"),
+        transcript_hmac=_bool(s, "transcriptHmac", d4.transcript_hmac, problems, "audit"),
+        hmac_key_file=_text(s, "hmacKeyFile", d4.hmac_key_file, problems, "audit"),
     )
 
     s = _section(raw, "alerts", problems)

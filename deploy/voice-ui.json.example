@@ -24,7 +24,9 @@
     "file": "/var/lib/hydra-umc/voice-ui-audit.jsonl",
     "maxBytes": 1048576,
     "maxFiles": 5,
-    "storeSubjectPlain": false
+    "storeSubjectPlain": false,
+    "transcriptHmac": true,
+    "hmacKeyFile": "/var/lib/hydra-umc/voice-ui-audit-hmac.key"
   },
   "alerts": {
     "enabled": false,

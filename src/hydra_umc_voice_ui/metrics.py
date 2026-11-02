@@ -88,5 +88,16 @@ class Metrics:
                 "# HELP hydra_umc_voice_ui_audit_write_errors_total Audit records that could not be written.",
                 "# TYPE hydra_umc_voice_ui_audit_write_errors_total counter",
                 f"hydra_umc_voice_ui_audit_write_errors_total {errors if isinstance(errors, int) else 0}",
+                "# HELP hydra_umc_voice_ui_audit_signing 1 when audit records are signed, 0 when the signing is on but the key cannot be had, -1 when signing is off.",
+                "# TYPE hydra_umc_voice_ui_audit_signing gauge",
+                f"hydra_umc_voice_ui_audit_signing {_signing_value(audit)}",
+                "# HELP hydra_umc_voice_ui_audit_unsigned_records_total Audit records written without a signature because the key could not be had.",
+                "# TYPE hydra_umc_voice_ui_audit_unsigned_records_total counter",
+                f"hydra_umc_voice_ui_audit_unsigned_records_total {audit.get('unsignedRecords') if isinstance(audit.get('unsignedRecords'), int) else 0}",
             ]
         return "\n".join(lines) + "\n"
+
+
+def _signing_value(audit: dict[str, object]) -> int:
+    state = audit.get("signing")
+    return -1 if state in (None, "off") else int(state == "ok")

@@ -83,7 +83,7 @@ Hailo-10 NPU 加速的高性能 STT（语音转文本）和 TTS（文本转语�
 * 🙈 **回复不会重复所说的内容（服务器设置）：** 默认情况下，回复的解释只列出匹配的规则；设置 `HYDRA_UMC_VOICE_UI_INCLUDE_HEARD_TEXT=1` 会加入转写文本（`heardText`、`normalizedText`），它属于个人数据。限制：规则只理解英语，轮次中的 `locale` 会被校验但不会被使用。 服务器也可以通过其 Server Admin 界面为每一轮设置它(以及最低置信度);本服务的环境变量优先于服务器。
 * 🗣️ **唤醒词、按键通话和说话人识别（可选，默认全部关闭）：** 启用 `wake.enabled` 后，一次语音必须以配置文件中的唤醒短语开头，或由按钮（`activation: push_to_talk`）或设备通知（`wake_word`）发起；口头“停止”无需唤醒，除非现场要求。启用 `speaker.enabled` 后，只有登记过声纹向量的操作员才能请求动作（向量在设备上生成，绝不是音频；保存在一个本地文件中，按要求删除，且不会发送到任何地方）；主设备的确认仍然必需。设置见 `voice-ui.json`（示例在 `deploy/voice-ui.json.example`）。*（服务端已用模拟向量测试；手表端仍待完成）*
 * ❓ **关于错误代码的提问（可选）：** “错误 0x05 是什么意思”可在八种语言中被理解，并由 HYDRA-UMC-DOCS-QA 以只读方式回答，附带文档出处；没有条目时如实说明，而不是猜测。默认关闭（`queries.enabled`）。
-* 📜 **审计日志（默认开启）和语音播报警报（可选）：** 审计日志每条命令写一行（请求 ID、意图、结果、确认，以及以带密钥哈希表示的人员；绝不包含文本、音频、声纹向量或地址），有大小上限和轮转，可用 `audit.enabled: false` 关闭，服务器可通过 `GET /v1/voice/audit` 读取；无法写入时服务照常运行（停止命令绝不会被拦下），并在 `/health` 和 `/metrics` 中报告。`alerts.enabled` 为系统状态文本和异常判定生成 `POST /v1/voice/alert` 的语句，带严重程度阈值且不重复；声音由设备发出。
+* 📜 **审计日志（默认开启）和语音播报警报（可选）：** 审计日志每条命令写一行（请求 ID、意图、结果、确认，以及以带密钥哈希表示的人员；绝不包含文本、音频、声纹向量或地址），有大小上限和轮转，可用 `audit.enabled: false` 关闭，服务器可通过 `GET /v1/voice/audit` 读取；无法写入时服务照常运行（停止命令绝不会被拦下），并在 `/health` 和 `/metrics` 中报告。每一行还会用 HMAC-SHA256 签名（`audit.transcriptHmac`，默认开启），密钥是仓库之外的文件（`audit.hmacKeyFile`），缺失时以受限权限创建，且绝不输出；没有密钥时各行会带着原因标记为未签名，并在 `/health` 和 `/metrics` 中报告，`python -m hydra_umc_voice_ui.audit` 可校验日志。`alerts.enabled` 为系统状态文本和异常判定生成 `POST /v1/voice/alert` 的语句，带严重程度阈值且不重复；声音由设备发出。
 * 🛡️ **噪声消除：** 针对高环境噪声的工业环境进行优化。*（计划中）*
 * 👨‍👩‍👧 **认知 AI 节点子项目：** 作为
   [HYDRA-UMC-COGNITIVE-NODE](https://github.com/JuanenRac/HYDRA-UMC-COGNITIVE-NODE) 下 4 个同级服务之一运行（与 VLA-Engine、Semantic-Planner 和 Docs-QA 并列），共享父项目的 HydraOS 镜像和模型权重，而非各自保留独立副本。
