@@ -12,6 +12,7 @@ Every optional feature is OFF in the defaults except the audit log, which is ON 
 `audit.enabled`: the service behaves as it always did until somebody turns the others on.
 
     {
+      "stateDir": "/var/lib/hydra-umc",
       "wake":    {"enabled": false, "phrases": ["hydra"], "allowPushToTalk": true, "stopNeedsWake": false},
       "speaker": {"enabled": false, "storeFile": "/var/lib/hydra-umc/voice-ui-speakers.json", "threshold": 0.85, "margin": 0.05, "maxSpeakers": 16},
       "queries": {"enabled": false, "docsQaUrl": "http://127.0.0.1:8110", "tokenFile": "", "timeoutSeconds": 3.0, "maxAnswerChars": 400},
@@ -20,6 +21,9 @@ Every optional feature is OFF in the defaults except the audit log, which is ON 
       "alerts":  {"enabled": false, "minSeverity": "warning", "repeatSeconds": 60, "criticalRepeatSeconds": 10, "maxChars": 200}
     }
 
+`stateDir` is the folder of the audit log, its key and the speaker store when their own paths are not given. Default: /var/lib/hydra-umc on Linux; outside
+Linux a folder of the user (never the root of a drive). The variable HYDRA_UMC_VOICE_UI_STATE_DIR overrides both (the tests use it).
+
 A value that is not valid is ignored and reported in `problems`, and the default for that value stays; a whole file that cannot be read leaves
 every default. Raw audio is never stored by any of these features.
 """
@@ -27,6 +31,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urlparse
@@ -34,6 +39,30 @@ from urllib.parse import urlparse
 CONFIG_ENV = "HYDRA_UMC_VOICE_UI_CONFIG"
 DEFAULT_CONFIG_FILE = "/etc/hydra-umc/voice-ui.json"
 MAX_CONFIG_BYTES = 64 * 1024
+
+STATE_DIR_ENV = "HYDRA_UMC_VOICE_UI_STATE_DIR"
+LINUX_STATE_DIR = "/var/lib/hydra-umc"
+
+
+def platform_state_dir() -> str:
+    """Where the state files (audit log, keys, speaker store) go when nothing says otherwise: /var/lib/hydra-umc on Linux (the CM5),
+    and a folder of the user outside Linux (so nothing is made at the root of a drive)."""
+    if sys.platform.startswith("linux"):
+        return LINUX_STATE_DIR
+    base = os.environ.get("LOCALAPPDATA") or os.environ.get("XDG_STATE_HOME") or str(Path.home())
+    return str(Path(base) / "hydra-umc")
+
+
+def default_state_dir(environ: dict[str, str] | None = None) -> str:
+    """HYDRA_UMC_VOICE_UI_STATE_DIR when set, else the folder of the platform (see platform_state_dir)."""
+    env = os.environ if environ is None else environ
+    named = env.get(STATE_DIR_ENV, "").strip()
+    return named if named else platform_state_dir()
+
+
+def _state_path(name: str, state_dir: str | None = None) -> str:
+    base = state_dir if state_dir else default_state_dir()
+    return base.rstrip("/\\") + "/" + name if base.startswith("/") else str(Path(base) / name)
 
 SEVERITIES = ("info", "warning", "critical")
 
@@ -50,7 +79,7 @@ class WakeConfig:
 @dataclass(frozen=True)
 class SpeakerConfig:
     enabled: bool = False
-    store_file: str = "/var/lib/hydra-umc/voice-ui-speakers.json"
+    store_file: str = field(default_factory=lambda: _state_path("voice-ui-speakers.json"))
     threshold: float = 0.85
     margin: float = 0.05
     max_speakers: int = 16
@@ -68,7 +97,7 @@ class QueryConfig:
 @dataclass(frozen=True)
 class AuditConfig:
     enabled: bool = True
-    file: str = "/var/lib/hydra-umc/voice-ui-audit.jsonl"
+    file: str = field(default_factory=lambda: _state_path("voice-ui-audit.jsonl"))
     max_bytes: int = 1024 * 1024
     max_files: int = 5
     store_subject_plain: bool = False
@@ -94,6 +123,8 @@ class VoiceConfig:
     queries: QueryConfig = field(default_factory=QueryConfig)
     audit: AuditConfig = field(default_factory=AuditConfig)
     alerts: AlertConfig = field(default_factory=AlertConfig)
+    # the folder of the state files ("stateDir" of the file, or HYDRA_UMC_VOICE_UI_STATE_DIR, or the platform default)
+    state_dir: str = field(default_factory=default_state_dir)
     # what was ignored when the file was read
     problems: tuple[str, ...] = ()
 
@@ -151,8 +182,13 @@ def parse_voice_config(raw: object) -> VoiceConfig:
         return VoiceConfig(problems=("the file must be a JSON object; the defaults stay",))
     problems: list[str] = []
     for name in raw:
-        if name not in ("wake", "speaker", "queries", "audit", "alerts"):
+        if name not in ("stateDir", "wake", "speaker", "queries", "audit", "alerts"):
             problems.append(f"{name!r} is not a known section and was ignored")
+
+    # the variable of the environment wins over the file; both win over the platform default
+    state_dir = _text(raw, "stateDir", "", problems, "config")
+    if os.environ.get(STATE_DIR_ENV, "").strip() or not state_dir:
+        state_dir = default_state_dir()
 
     s = _section(raw, "wake", problems)
     _unknown(s, ("enabled", "phrases", "allowPushToTalk", "stopNeedsWake"), "wake", problems)
@@ -173,7 +209,7 @@ def parse_voice_config(raw: object) -> VoiceConfig:
 
     s = _section(raw, "speaker", problems)
     _unknown(s, ("enabled", "storeFile", "threshold", "margin", "maxSpeakers"), "speaker", problems)
-    d2 = SpeakerConfig()
+    d2 = SpeakerConfig(store_file=_state_path("voice-ui-speakers.json", state_dir))
     speaker = SpeakerConfig(
         enabled=_bool(s, "enabled", d2.enabled, problems, "speaker"),
         store_file=_text(s, "storeFile", d2.store_file, problems, "speaker"),
@@ -200,7 +236,7 @@ def parse_voice_config(raw: object) -> VoiceConfig:
 
     s = _section(raw, "audit", problems)
     _unknown(s, ("enabled", "file", "maxBytes", "maxFiles", "storeSubjectPlain", "transcriptHmac", "hmacKeyFile"), "audit", problems)
-    d4 = AuditConfig()
+    d4 = AuditConfig(file=_state_path("voice-ui-audit.jsonl", state_dir))
     audit = AuditConfig(
         enabled=_bool(s, "enabled", d4.enabled, problems, "audit"),
         file=_text(s, "file", d4.file, problems, "audit"),
@@ -225,7 +261,7 @@ def parse_voice_config(raw: object) -> VoiceConfig:
         critical_repeat_seconds=_number(s, "criticalRepeatSeconds", d5.critical_repeat_seconds, 0.0, 86400.0, problems, "alerts"),
         max_chars=int(_number(s, "maxChars", d5.max_chars, 20, 1000, problems, "alerts", whole=True)),
     )
-    return VoiceConfig(wake=wake, speaker=speaker, queries=queries, audit=audit, alerts=alerts, problems=tuple(problems))
+    return VoiceConfig(wake=wake, speaker=speaker, queries=queries, audit=audit, alerts=alerts, state_dir=state_dir, problems=tuple(problems))
 
 
 _cache: dict[str, tuple[tuple[int, int], VoiceConfig]] = {}

@@ -689,4 +689,8 @@ def test_the_example_configuration_is_valid_and_everything_in_it_is_off() -> Non
     assert config.problems == ()
     # the example names the key file on purpose (outside the folder of the log); the default is a file beside the log
     assert config.audit.hmac_key_file == "/var/lib/hydra-umc/voice-ui-audit-hmac.key"
-    assert config == VoiceConfig(audit=AuditConfig(hmac_key_file=config.audit.hmac_key_file))
+    # the file names and the store are the Linux folder on purpose; the rest is the default
+    assert config == VoiceConfig(
+        speaker=SpeakerConfig(store_file=config.speaker.store_file),
+        audit=AuditConfig(file=config.audit.file, hmac_key_file=config.audit.hmac_key_file),
+    )

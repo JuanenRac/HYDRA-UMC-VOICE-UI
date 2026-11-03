@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The folder of the audit log, its keys and the speaker store is configurable and no longer lands at the root of a drive outside Linux:** new `stateDir` in the configuration file and `HYDRA_UMC_VOICE_UI_STATE_DIR` (the variable wins). On Linux the default stays `/var/lib/hydra-umc`; elsewhere it is a folder of the user (`%LOCALAPPDATA%\hydra-umc`). The tests always use their own temporary folder, and a new check fails the run if anything is written under `C:ar` or `/var/lib/hydra-umc`.
+
 ## [0.2.3] - The audit log of the voice commands is on by default and every line of it is signed with a keyed hash that a verifier checks, and the service reports whether the log can be written
 
 - **Every audit line is signed (`audit.transcriptHmac`, on by default):** each record of the voice audit log carries `kid` and `sig`, an HMAC-SHA256 of the record, so a changed or forged line is detected. The key is a file outside the repository (`audit.hmacKeyFile`, by default beside the log), created with restrictive permissions when it is missing and never printed. When the key cannot be had the log goes on but marks each line `unsigned` with the reason, and `GET /health` (`audit.signing`, `audit.unsignedRecords`) and `GET /metrics` say so; it never switches itself off. New `python -m hydra_umc_voice_ui.audit` command to check a log (several keys, so a replaced key still verifies old lines). Documented in the gateway guide and in the README in the eight languages; 11 new tests (tampering, forged and stripped lines, missing and damaged key, replaced key, rotation, cost, switch off, command, health and metrics).
