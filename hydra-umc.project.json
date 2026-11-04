@@ -24,5 +24,8 @@
   "service": {
     "port": 8091,
     "health_path": "/health"
-  }
+  },
+  "depends_on": [
+    "HYDRA-UMC-COGNITIVE-NODE"
+  ]
 }
