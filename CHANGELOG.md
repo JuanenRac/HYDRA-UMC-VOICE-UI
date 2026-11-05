@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.2.4] - A spoken question about a node or a motor is understood, in the eight languages: "how is motor 3" becomes the read-only intent querynode with the name of the node (motor3), at the level informative, and the word "status"... (and 2 more changes)
+
 - **A spoken question about a node or a motor is understood, in the eight languages:** "how is motor 3" becomes the read-only intent `query_node` with the name of the node (`motor3`), at the level `informative`, and the word "status" inside it no longer makes it a request for the status of the robot. The service answers that the server reads the state; HYDRA-UMC-SERVER writes the sentence from the latest verdict of the anomaly detector. 13 new tests (427 in all).
 
 - **The build test of the repository compiles only on CI or when allowed:** for the stacks that compile (`rust`, `go`, `android`, `flutter`, `firmware-c`), `tools/build_test.py` prints `BUILD_TEST=SKIPPED` with exit status 2 on a plain PC, never a pass; `ALLOW_LOCAL_BUILD=1` allows it and a CI runner always may. The `python` and `node` stacks are not locked.
