@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The build test of the repository compiles only on CI or when allowed:** for the stacks that compile (`rust`, `go`, `android`, `flutter`, `firmware-c`), `tools/build_test.py` prints `BUILD_TEST=SKIPPED` with exit status 2 on a plain PC, never a pass; `ALLOW_LOCAL_BUILD=1` allows it and a CI runner always may. The `python` and `node` stacks are not locked.
+
 - **The folder of the audit log, its keys and the speaker store is configurable and no longer lands at the root of a drive outside Linux:** new `stateDir` in the configuration file and `HYDRA_UMC_VOICE_UI_STATE_DIR` (the variable wins). On Linux the default stays `/var/lib/hydra-umc`; elsewhere it is a folder of the user (`%LOCALAPPDATA%\hydra-umc`). The tests always use their own temporary folder, and a new check fails the run if anything is written under `C:ar` or `/var/lib/hydra-umc`.
 
 ## [0.2.3] - The audit log of the voice commands is on by default and every line of it is signed with a keyed hash that a verifier checks, and the service reports whether the log can be written
