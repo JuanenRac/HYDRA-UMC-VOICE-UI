@@ -44,6 +44,7 @@ from .messages import language_of, message
 from .intent import (
     INTENT_GO_HOME,
     INTENT_QUERY_ERROR,
+    INTENT_QUERY_NODE,
     INTENT_START_MISSION,
     INTENT_STATUS,
     INTENT_STOP,
@@ -589,6 +590,18 @@ def process_voice_turn(
         return AssistantReply(
             request_id=turn.request_id,
             **said("status", target=target),
+            level="ATTENTION",
+            speak=True,
+            requires_confirmation=False,
+            intent=intent,
+            interpretation=interpretation,
+        )
+
+    if intent.name == INTENT_QUERY_NODE and not risk.requires_confirmation(INTENT_QUERY_NODE):
+        # the answer is the server's (it holds the verdicts of the anomaly detector); this is the sentence for a client that gets no more
+        return AssistantReply(
+            request_id=turn.request_id,
+            **said("node_query", node=intent.entities.get("node", "")),
             level="ATTENTION",
             speak=True,
             requires_confirmation=False,

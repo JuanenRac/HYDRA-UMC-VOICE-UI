@@ -24,6 +24,8 @@ INTENT_STATUS = "status"
 INTENT_GO_HOME = "go_home"
 # a question about an error code: read only, answered from the documentation (queries.py)
 INTENT_QUERY_ERROR = "query_error"
+# a question about how a node or a motor is doing: read only, answered by the server from the verdicts of the anomaly detector (node_query.py)
+INTENT_QUERY_NODE = "query_node"
 
 
 @dataclass(frozen=True)
@@ -144,6 +146,7 @@ def classify_intent(text: str) -> IntentClassification:
     """
     # the phrases of the seven other languages are an addition (see intent_languages.py); imported here because that module needs the names above
     from .intent_languages import is_negated, language_matches
+    from .node_query import node_query_matches
     from .queries import query_matches
 
     normalized = normalize_text(text)
@@ -166,6 +169,11 @@ def classify_intent(text: str) -> IntentClassification:
         # "what does the status 0x05 mean" asks about a code; it is not a request for the status of the robot
         matches = [match for match in matches if match.name != INTENT_STATUS]
         matches.append(Intent(name=INTENT_QUERY_ERROR, entities=question))
+    node_question = node_query_matches(plain)
+    if node_question is not None:
+        # "how is motor 3" asks about a node; the word "status" or "estado" in it is not a request for the status of the robot
+        matches = [match for match in matches if match.name != INTENT_STATUS]
+        matches.append(Intent(name=INTENT_QUERY_NODE, entities=node_question))
     return IntentClassification(
         matches=tuple(matches),
         negated=bool(matches) and (_NEGATION.search(plain) is not None or is_negated(plain)),

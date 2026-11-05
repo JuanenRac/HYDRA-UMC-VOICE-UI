@@ -168,6 +168,16 @@ MESSAGES: dict[str, dict[str, str]] = {
         "zh": "无法确认您是授权操作员，因此没有请求该动作。",
         "pt": "Não consegui confirmar que é um operador autorizado, por isso o movimento não foi pedido.",
     },
+    "node_query": {
+        "en": "The state of {node} is read by the server.",
+        "es": "El servidor lee el estado de {node}.",
+        "de": "Der Zustand von {node} wird vom Server gelesen.",
+        "fr": "L'état de {node} est lu par le serveur.",
+        "it": "Lo stato di {node} viene letto dal server.",
+        "ja": "{node} の状態はサーバーが読み取ります。",
+        "zh": "{node} 的状态由服务器读取。",
+        "pt": "O estado de {node} é lido pelo servidor.",
+    },
     "query_off": {
         "en": "Questions about error codes are switched off on this system.",
         "es": "Las preguntas sobre códigos de error están desactivadas en este sistema.",
