@@ -1,0 +1,39 @@
+# =============================================================================
+# HYDRA-UMC-VOICE-UI - Simulation bench
+# Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
+# GPL-3.0-or-later - see LICENSE
+#
+# Runs the voice chain against synthetic audio and a stand-in recognizer only (no microphone, no speech model).
+# See docs/SIMULATION.md.
+# =============================================================================
+name: Simulation bench
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  simulation:
+    name: Run the synthetic voice chain
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Install the node
+        run: python -m pip install -e ".[dev]"
+      - name: Run the synthetic recording through the detector and the gateway
+        run: >
+          python -m pytest -q
+          tests/test_voice_pipeline_synthetic.py tests/test_audio.py tests/test_gateway.py tests/test_http_service.py
+          tests/test_intent.py tests/test_intent_languages.py tests/test_risk_table.py tests/test_stop_setting.py
