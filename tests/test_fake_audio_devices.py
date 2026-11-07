@@ -61,7 +61,7 @@ class FakeRecognizer:
     """Says what an utterance was from its pitch (zero crossings per second)."""
 
     def hear(self, samples: list[int]) -> tuple[str, float]:
-        crossings = sum(1 for a, b in zip(samples, samples[1:]) if (a < 0) != (b < 0))
+        crossings = sum(1 for a, b in zip(samples, samples[1:], strict=False) if (a < 0) != (b < 0))
         pitch = crossings / 2 / (len(samples) / RATE)
         nearest = min(PITCHES, key=lambda candidate: abs(candidate - pitch))
         return PITCHES[nearest], 0.9 if abs(nearest - pitch) < 40 else 0.3
