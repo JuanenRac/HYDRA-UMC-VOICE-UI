@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A fake microphone, recognizer and speaker around the real detector, gateway and alert composer:** `tests/test_fake_audio_devices.py` hands a recording to the streaming voice detector in blocks of 7 to 4096 samples, reads each utterance with a stand-in recognizer, runs the turns through the gateway with the wake word on (a status needs the wake word, a movement waits for confirmation, a stop is accepted with or without it, an unsure reading moves nothing), and plays anomaly verdicts in the eight languages to a fake speaker (spoken once per window, the critical window shorter, a good verdict silent, off by default). Simulator evidence only; no real microphone, wake word model, speech recognizer or loudspeaker was used.
+
 ## [0.2.4] - A spoken question about a node or a motor is understood, in the eight languages: "how is motor 3" becomes the read-only intent querynode with the name of the node (motor3), at the level informative, and the word "status"... (and 2 more changes)
 
 - **A spoken question about a node or a motor is understood, in the eight languages:** "how is motor 3" becomes the read-only intent `query_node` with the name of the node (`motor3`), at the level `informative`, and the word "status" inside it no longer makes it a request for the status of the robot. The service answers that the server reads the state; HYDRA-UMC-SERVER writes the sentence from the latest verdict of the anomaly detector. 13 new tests (427 in all).

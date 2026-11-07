@@ -35,5 +35,5 @@ jobs:
       - name: Run the synthetic recording through the detector and the gateway
         run: >
           python -m pytest -q
-          tests/test_voice_pipeline_synthetic.py tests/test_audio.py tests/test_gateway.py tests/test_http_service.py
+          tests/test_voice_pipeline_synthetic.py tests/test_fake_audio_devices.py tests/test_audio.py tests/test_gateway.py tests/test_http_service.py
           tests/test_intent.py tests/test_intent_languages.py tests/test_risk_table.py tests/test_stop_setting.py
