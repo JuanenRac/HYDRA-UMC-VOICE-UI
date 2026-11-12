@@ -93,6 +93,8 @@ It allows operators to control robotic missions, query system status, and receiv
 
 **HYDRA-UMC-VOICE-UI** is the voice front end of the cognitive node: it detects voice in a WAV file, parses already-recognised text, in the eight languages of the project, into an intent with rules, and offers a bounded HTTP gateway for the watch flow that asks for a confirmation before anything is handed on. It does not recognise speech yet and never sends a physical command.
 
+> **Platform:** where this README says CM5, it means the pilot bench that runs today; the target platform of HYDRA-UMC is an NVIDIA Jetson Orin NX 16 GB, a design that has not been built or tested.
+
 ## 🏛️ Architecture
 
 <p align="center">

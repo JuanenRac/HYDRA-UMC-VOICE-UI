@@ -92,6 +92,8 @@ Permite aos operadores controlar missões robóticas, consultar o estado do sist
 
 O **HYDRA-UMC-VOICE-UI** é a entrada de voz do nó cognitivo: deteta voz num ficheiro WAV, analisa com regras um texto já reconhecido, nos oito idiomas do projeto, para obter uma intenção e oferece um gateway HTTP limitado para o fluxo do relógio, que pede uma confirmação antes de passar o que quer que seja. Ainda não reconhece fala e nunca envia um comando físico.
 
+> **Plataforma:** onde este README diz CM5, refere-se ao banco piloto que funciona hoje; a plataforma objetivo do HYDRA-UMC é uma NVIDIA Jetson Orin NX de 16 GB, um desenho que não foi construído nem testado.
+
 ## 🏛️ Arquitetura
 
 <p align="center">

@@ -93,6 +93,8 @@ Sie ermöglicht es Bedienern, Robotermissionen zu steuern, den Systemstatus abzu
 
 **HYDRA-UMC-VOICE-UI** ist das Sprach-Frontend des kognitiven Knotens: Es erkennt Stimme in einer WAV-Datei, zerlegt bereits erkannten Text in den acht Sprachen des Projekts regelbasiert in eine Absicht und bietet ein begrenztes HTTP-Gateway für den Uhren-Ablauf, das vor jeder Weitergabe eine Bestätigung verlangt. Es erkennt noch keine Sprache und sendet nie einen physischen Befehl.
 
+> **Plattform:** Wo dieses README CM5 sagt, ist der Pilotprüfstand gemeint, der heute läuft; die Zielplattform von HYDRA-UMC ist ein NVIDIA Jetson Orin NX 16 GB, ein Entwurf, der weder gebaut noch getestet wurde.
+
 ## 🏛️ Architektur
 
 <p align="center">
