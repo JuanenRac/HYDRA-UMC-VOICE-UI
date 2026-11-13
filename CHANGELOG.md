@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The coverage of the tests is measured on every change:** the workflow "Coverage floor" runs the whole suite under line and branch coverage and fails when it falls under 93 %.
+- **The client of the documentation service is tested at its edges:** `tests/test_docs_qa_client_edges.py` runs it against an HTTP stand-in that answers with a definition, with nothing, with rubbish, with too much, with an error status and not at all, and checks what the person is told in each case, the cut of the answer and of the citation, the encoding of the code and that the token is sent only when there is a readable one.
+
 - **Every audit line is chained to the one before it (`audit.chain`, on by default):** each record carries `prev`, the hash of the previous line (`genesis` for the first), inside the signed bytes, so a deleted, inserted or reordered whole line is found, not only a changed one. The chain follows rotation, a log from before the chain still verifies, and `python -m hydra_umc_voice_ui.audit` reports the broken lines as `chainBroken` and exits with 1. `GET /health` shows `audit.chain`. Tests with simulated logs only.
 
 - **README: the platform statement:** a note says that where the README speaks of the CM5 it means the pilot bench that runs today, and that the target platform of HYDRA-UMC, an NVIDIA Jetson Orin NX 16 GB, is a design that has not been built or tested.
