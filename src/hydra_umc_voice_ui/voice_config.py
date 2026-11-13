@@ -17,7 +17,7 @@ Every optional feature is OFF in the defaults except the audit log, which is ON 
       "speaker": {"enabled": false, "storeFile": "/var/lib/hydra-umc/voice-ui-speakers.json", "threshold": 0.85, "margin": 0.05, "maxSpeakers": 16},
       "queries": {"enabled": false, "docsQaUrl": "http://127.0.0.1:8110", "tokenFile": "", "timeoutSeconds": 3.0, "maxAnswerChars": 400},
       "audit":   {"enabled": true, "file": "/var/lib/hydra-umc/voice-ui-audit.jsonl", "maxBytes": 1048576, "maxFiles": 5, "storeSubjectPlain": false,
-                "transcriptHmac": true, "hmacKeyFile": "/var/lib/hydra-umc/voice-ui-audit-hmac.key"},
+                "transcriptHmac": true, "hmacKeyFile": "/var/lib/hydra-umc/voice-ui-audit-hmac.key", "chain": true},
       "alerts":  {"enabled": false, "minSeverity": "warning", "repeatSeconds": 60, "criticalRepeatSeconds": 10, "maxChars": 200}
     }
 
@@ -105,6 +105,8 @@ class AuditConfig:
     # missing and never printed; "" means a file beside the log (<file>.hmac.key). See audit.py for what happens when the key cannot be had.
     transcript_hmac: bool = True
     hmac_key_file: str = ""
+    # Every record also carries the hash of the line before it (ON by default), so a deleted, inserted or reordered line is found by the verifier.
+    chain: bool = True
 
 
 @dataclass(frozen=True)
@@ -235,7 +237,7 @@ def parse_voice_config(raw: object) -> VoiceConfig:
     )
 
     s = _section(raw, "audit", problems)
-    _unknown(s, ("enabled", "file", "maxBytes", "maxFiles", "storeSubjectPlain", "transcriptHmac", "hmacKeyFile"), "audit", problems)
+    _unknown(s, ("enabled", "file", "maxBytes", "maxFiles", "storeSubjectPlain", "transcriptHmac", "hmacKeyFile", "chain"), "audit", problems)
     d4 = AuditConfig(file=_state_path("voice-ui-audit.jsonl", state_dir))
     audit = AuditConfig(
         enabled=_bool(s, "enabled", d4.enabled, problems, "audit"),
@@ -245,6 +247,7 @@ def parse_voice_config(raw: object) -> VoiceConfig:
         store_subject_plain=_bool(s, "storeSubjectPlain", d4.store_subject_plain, problems, "audit"),
         transcript_hmac=_bool(s, "transcriptHmac", d4.transcript_hmac, problems, "audit"),
         hmac_key_file=_text(s, "hmacKeyFile", d4.hmac_key_file, problems, "audit"),
+        chain=_bool(s, "chain", d4.chain, problems, "audit"),
     )
 
     s = _section(raw, "alerts", problems)

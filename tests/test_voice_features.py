@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 from hydra_umc_voice_ui.alerts import AlertError, AlertSpeaker
-from hydra_umc_voice_ui.audit import AuditLog, key_id, read_key_file, verify_lines
+from hydra_umc_voice_ui.audit import AuditLog, key_id, line_hash, read_key_file, verify_lines
 from hydra_umc_voice_ui.audit import main as audit_main
 from hydra_umc_voice_ui.gateway import VoiceTurn, VoiceTurnValidationError, confirm_pending_action, process_voice_turn
 from hydra_umc_voice_ui.http_service import VoiceGatewayServer
@@ -326,7 +326,7 @@ def _audit(tmp_path: Path, **kw: object) -> AuditLog:
 
 def test_audit_switched_off_writes_nothing(tmp_path: Path) -> None:
     log = AuditLog(AuditConfig(enabled=False, file=str(tmp_path / "audit.jsonl")))
-    assert log.status() == {"enabled": False, "writable": None, "writeErrors": 0, "signing": "off", "unsignedRecords": 0}
+    assert log.status() == {"enabled": False, "writable": None, "writeErrors": 0, "signing": "off", "chain": True, "unsignedRecords": 0}
     assert log.record("turn", request_id="r", intent="stop", outcome="stop_now") is False
     assert not list(tmp_path.iterdir())
 
@@ -341,7 +341,7 @@ def test_a_record_has_no_text_and_names_the_person_by_a_keyed_hash(tmp_path: Pat
     records = log.tail()
     assert records[0]["subject"] == records[1]["subject"] != records[2]["subject"] and len(str(records[0]["subject"])) == 16
     assert records[2]["outcome"] == "other" and records[0]["speaker"] == "verified"
-    assert set(records[0]) == {"ts", "event", "requestId", "intent", "outcome", "confirmation", "speaker", "subject", "kid", "sig"}
+    assert set(records[0]) == {"ts", "event", "requestId", "intent", "outcome", "confirmation", "speaker", "subject", "prev", "kid", "sig"}
     # the same name on another machine (another key) gives another hash
     other = AuditLog(AuditConfig(enabled=True, file=str(tmp_path / "other" / "audit.jsonl")))
     assert other.person("ana") != log.person("ana")
@@ -372,7 +372,7 @@ def test_a_log_that_cannot_be_written_never_stops_a_command(tmp_path: Path) -> N
     blocker.write_text("x", encoding="utf-8")
     log = AuditLog(AuditConfig(enabled=True, file=str(blocker / "sub" / "audit.jsonl")))
     assert log.record("turn", request_id="r", intent=None, outcome="no_match") is False and log.write_errors == 1
-    assert log.status() == {"enabled": True, "writable": False, "writeErrors": 1, "signing": "key_cannot_be_created", "unsignedRecords": 1}
+    assert log.status() == {"enabled": True, "writable": False, "writeErrors": 1, "signing": "key_cannot_be_created", "chain": True, "unsignedRecords": 1}
     assert "audit" not in str(log.status().get("path", ""))
 
 
@@ -383,9 +383,93 @@ def test_audit_failure_is_visible_in_health_and_metrics_and_never_blocks_a_stop(
         stop = _call(f"{base}/v1/voice/turn", {"requestId": "r-2", "transcript": "stop", "locale": "en"})
         assert stop[0] == 200 and stop[1]["intent"]["name"] == "stop"
         health = json.loads(urllib.request.urlopen(f"{base}/health").read())  # noqa: S310 - local test server
-        assert health["audit"] == {"enabled": True, "writable": False, "writeErrors": 1, "signing": "key_cannot_be_created", "unsignedRecords": 1}
+        assert health["audit"] == {"enabled": True, "writable": False, "writeErrors": 1, "signing": "key_cannot_be_created", "chain": True, "unsignedRecords": 1}
         metrics = urllib.request.urlopen(f"{base}/metrics").read().decode()  # noqa: S310
         assert "hydra_umc_voice_ui_audit_writable 0" in metrics and "hydra_umc_voice_ui_audit_write_errors_total 1" in metrics
+
+
+# ---------------------------------------------------------------- audit chain (chain)
+
+
+def test_chain_links_every_line_to_the_one_before(tmp_path: Path) -> None:
+    log = _audit(tmp_path)
+    _write_some(log, 4)
+    lines = (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()
+    records = [json.loads(line) for line in lines]
+    assert records[0]["prev"] == "genesis"
+    assert [r["prev"] for r in records[1:]] == [line_hash(line) for line in lines[:-1]]
+    report = verify_lines(lines, _keys(log))
+    assert report["ok"] == 4 and report["chainBroken"] == []
+
+
+def test_chain_finds_a_deleted_inserted_or_reordered_line(tmp_path: Path) -> None:
+    log = _audit(tmp_path)
+    _write_some(log, 5)
+    lines = (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()
+    keys = _keys(log)
+    assert verify_lines(lines[:2] + lines[3:], keys)["chainBroken"] == [3]  # line 3 was deleted: every remaining line still has a good signature
+    assert verify_lines(lines[:3] + [lines[1]] + lines[3:], keys)["chainBroken"] == [4, 5]  # a copy was put in
+    assert verify_lines([lines[0], lines[2], lines[1]] + lines[3:], keys)["chainBroken"] == [2, 3, 4]  # two lines swapped
+    assert verify_lines(lines[:2] + lines[3:], keys)["bad"] == []
+
+
+def test_chain_starts_where_the_check_starts_and_old_lines_are_tolerated(tmp_path: Path) -> None:
+    log = _audit(tmp_path, chain=False)
+    _write_some(log, 2)
+    old = (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()
+    assert all("prev" not in json.loads(line) for line in old)
+    assert verify_lines(old, _keys(log))["chainBroken"] == []
+    chained = _audit(tmp_path)  # a log written before the chain existed goes on, chained from its next line
+    _write_some(chained, 3)
+    lines = (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()
+    assert json.loads(lines[2])["prev"] == line_hash(lines[1])
+    assert verify_lines(lines, _keys(chained))["chainBroken"] == []
+    assert verify_lines(lines[3:], _keys(chained))["chainBroken"] == []  # the check may start in the middle of a log
+    assert verify_lines(lines[3:], _keys(chained), previous="0" * 32)["chainBroken"] == [1]
+
+
+def test_chain_survives_rotation_and_a_restart(tmp_path: Path) -> None:
+    log = _audit(tmp_path, max_bytes=4096, max_files=3)
+    for number in range(30):
+        log.record("turn", request_id=f"r-{number}", intent="status", outcome="acknowledged")
+    assert (tmp_path / "audit.jsonl.1").exists()
+    restarted = _audit(tmp_path, max_bytes=4096, max_files=3)  # the last link is read again from the files
+    restarted.record("turn", request_id="after", intent="status", outcome="acknowledged")
+    assert restarted.record("turn", request_id="after-2", intent="status", outcome="acknowledged")
+    names = [tmp_path / "audit.jsonl.2", tmp_path / "audit.jsonl.1", tmp_path / "audit.jsonl"]
+    previous = None
+    total = 0
+    for file in names:
+        if not file.exists():
+            continue
+        report = verify_lines(file.read_text(encoding="utf-8").splitlines(), _keys(log), previous)
+        assert report["chainBroken"] == [] and report["bad"] == []
+        previous = report["last"]  # type: ignore[assignment]
+        total += int(report["ok"])  # type: ignore[call-overload]
+    assert total > 10
+
+
+def test_chain_is_inside_the_signature_and_the_command_reports_it(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    log = _audit(tmp_path)
+    _write_some(log, 4)
+    path = tmp_path / "audit.jsonl"
+    lines = path.read_text(encoding="utf-8").splitlines()
+    forged = json.loads(lines[2])
+    forged["prev"] = "f" * 32  # rewriting the link without the key breaks the signature of that line
+    assert verify_lines([lines[0], lines[1], json.dumps(forged, separators=(",", ":"))], _keys(log))["bad"] == [3]
+    path.write_text("\n".join(lines[:1] + lines[2:]) + "\n", encoding="utf-8")
+    assert audit_main([str(path), "--key-file", str(log.hmac_path())]) == 1
+    assert "chainBroken=[2]" in capsys.readouterr().out
+
+
+def test_chain_switch_in_the_configuration(tmp_path: Path) -> None:
+    assert parse_voice_config({}).audit.chain is True
+    assert parse_voice_config({"audit": {"chain": False}}).audit.chain is False
+    assert parse_voice_config({"audit": {"chain": "yes"}}).problems  # not a boolean: reported, the default (on) stays
+    log = _audit(tmp_path, chain=False)
+    _write_some(log, 2)
+    assert all("prev" not in json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines())
+    assert log.status()["chain"] is False
 
 
 # ---------------------------------------------------------------- audit signatures (transcriptHmac)

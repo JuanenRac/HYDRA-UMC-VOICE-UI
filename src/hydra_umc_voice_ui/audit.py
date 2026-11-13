@@ -21,8 +21,14 @@ still be given to the verifier). The key is a file outside the repository (`audi
 permissions `0600` when it is missing and never printed or logged. When the switch is on and the key cannot be had (it cannot be created, or the
 file is damaged and is NOT overwritten) the log goes on, but every record carries `unsigned` with the reason, and `/health`, `/metrics` and
 `status()` say so: it never fails silently and never switches itself off. Check a log with
-`python -m hydra_umc_voice_ui.audit FILE... [--config voice-ui.json | --key-file KEY]...`; the signature detects a changed or forged line, not a
-deleted whole line.
+`python -m hydra_umc_voice_ui.audit FILE... [--config voice-ui.json | --key-file KEY]...`; the signature detects a changed or forged line.
+
+Each record also carries `prev` (`audit.chain`, ON by default): the first 32 hex digits of the SHA-256 of the line written just before it
+(`genesis` for the very first line of a log), and `prev` is inside the signed bytes. A deleted, inserted or reordered whole line then breaks the
+chain at the next line, and the verifier reports the line numbers (`chainBroken`). The chain goes on across a rotation, and a log written before
+the chain existed (lines without `prev`) still verifies: the chain starts at its first chained line. The chain proves that the lines it holds are
+in order and complete from the first one given; it cannot show that the newest lines were cut off the end, nor that the oldest rotated file was
+dropped, because nothing later refers to them.
 """
 from __future__ import annotations
 
@@ -64,9 +70,20 @@ def read_key_file(path: str | Path) -> bytes | None:
     return key if len(key) >= 16 else None
 
 
-def verify_lines(lines: list[str], keys: dict[str, bytes]) -> dict[str, object]:
-    """Checks the signature of every line. `keys` maps a key id to a key. Returns the count of good lines and the 1-based numbers of the others."""
+GENESIS = "genesis"
+
+
+def line_hash(line: str | bytes) -> str:
+    """The link of the chain: the first 32 hex digits of the SHA-256 of a whole line without its newline."""
+    raw = line if isinstance(line, bytes) else line.encode("utf-8")
+    return hashlib.sha256(raw.strip()).hexdigest()[:32]
+
+
+def verify_lines(lines: list[str], keys: dict[str, bytes], previous: str | None = None) -> dict[str, object]:
+    """Checks the signature and the chain of every line. `keys` maps a key id to a key; `previous` is the link of the line before the first one
+    (None when the first line is where the check starts). Returns the count of good lines and the 1-based numbers of the others."""
     ok = 0
+    chain_broken: list[int] = []
     bad: list[int] = []
     unsigned: list[int] = []
     unknown_key: list[int] = []
@@ -82,6 +99,11 @@ def verify_lines(lines: list[str], keys: dict[str, bytes]) -> dict[str, object]:
         if not isinstance(item, dict):
             malformed.append(number)
             continue
+        link = item.get("prev")
+        if isinstance(link, str):
+            if (link == GENESIS and previous is not None) or (link != GENESIS and previous is not None and link != previous):
+                chain_broken.append(number)
+        previous = line_hash(line)
         sig, kid = item.get("sig"), item.get("kid")
         if not isinstance(sig, str) or not isinstance(kid, str):
             unsigned.append(number)
@@ -95,7 +117,8 @@ def verify_lines(lines: list[str], keys: dict[str, bytes]) -> dict[str, object]:
             ok += 1
         else:
             bad.append(number)
-    return {"ok": ok, "bad": bad, "unsigned": unsigned, "unknownKey": unknown_key, "malformed": malformed, "unsignedReasons": reasons}
+    return {"ok": ok, "bad": bad, "unsigned": unsigned, "unknownKey": unknown_key, "malformed": malformed, "unsignedReasons": reasons,
+            "chainBroken": chain_broken, "last": previous}
 
 
 class AuditLog:
@@ -107,6 +130,7 @@ class AuditLog:
         self._sign_key: bytes | None = None
         self._sign_problem = ""  # why the records are not signed right now ("" when they are, or when signing is off)
         self.unsigned_records = 0
+        self._last_link: str | None = None  # the link of the last line written (None until it is read from the files)
         self.write_errors = 0
         self.writable = True  # False after a failed write, True again after the next one that works
         if config.enabled and config.transcript_hmac:
@@ -178,6 +202,20 @@ class AuditLog:
         signed = {**record, "kid": key_id(key)}
         return {**signed, "sig": hmac.new(key, canonical(signed), hashlib.sha256).hexdigest()}
 
+    def _previous_link(self) -> str:
+        """The link of the line before the next one: the last line of the newest file that has one, or `genesis` for an empty log."""
+        if self._last_link is None:
+            self._last_link = GENESIS
+            for file in [self.path] + [self.path.with_name(f"{self.path.name}.{n}") for n in range(1, self.config.max_files)]:
+                try:
+                    lines = [line for line in file.read_text(encoding="utf-8").splitlines() if line.strip()]
+                except OSError:
+                    continue
+                if lines:
+                    self._last_link = line_hash(lines[-1])
+                    break
+        return self._last_link
+
     def person(self, subject: str) -> str:
         """How the log names a person: the keyed hash (16 hex characters), or the name itself when the site asked for that."""
         if not subject:
@@ -224,6 +262,8 @@ class AuditLog:
                 "subject": self.person(subject),
             }
             with self._lock:
+                if self.config.chain:
+                    record["prev"] = self._previous_link()
                 line = (json.dumps(self._sign(record), separators=(",", ":")) + "\n").encode("utf-8")
                 self.path.parent.mkdir(parents=True, exist_ok=True)
                 if self.path.exists() and self.path.stat().st_size + len(line) > self.config.max_bytes:
@@ -232,6 +272,7 @@ class AuditLog:
                 descriptor = os.open(self.path, flags, 0o600)
                 with os.fdopen(descriptor, "ab") as stream:
                     stream.write(line)
+                self._last_link = line_hash(line)
             self.writable = True
             return True
         except Exception:  # noqa: BLE001 - whatever goes wrong, the voice command (a stop above all) must go on
@@ -247,6 +288,7 @@ class AuditLog:
             "writable": self.writable if self.config.enabled else None,
             "writeErrors": self.write_errors,
             "signing": signing,
+            "chain": self.config.chain,
             "unsignedRecords": self.unsigned_records,
         }
 
@@ -302,6 +344,7 @@ def main(argv: list[str] | None = None) -> int:
         base = Path(audit.file)
         files = [base.with_name(f"{base.name}.{n}") for n in range(audit.max_files - 1, 0, -1)] + [base]
     worst = 0
+    previous: str | None = None
     for file in files:
         try:
             lines = file.read_text(encoding="utf-8").splitlines()
@@ -310,10 +353,11 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"{file}: cannot be read")
                 worst = 1
             continue
-        report = verify_lines(lines, keys)
-        print(f"{file}: ok={report['ok']} bad={report['bad']} unknownKey={report['unknownKey']} malformed={report['malformed']} "
+        report = verify_lines(lines, keys, previous)
+        previous = report["last"] if report["last"] is not None else previous  # type: ignore[assignment]
+        print(f"{file}: ok={report['ok']} bad={report['bad']} chainBroken={report['chainBroken']} unknownKey={report['unknownKey']} malformed={report['malformed']} "
               f"unsigned={len(report['unsigned'])} {report['unsignedReasons']}")  # type: ignore[arg-type]
-        if report["bad"] or report["unknownKey"] or report["malformed"]:
+        if report["bad"] or report["chainBroken"] or report["unknownKey"] or report["malformed"]:
             worst = 1
         elif report["unsigned"]:
             worst = max(worst, 2)
