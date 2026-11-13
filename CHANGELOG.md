@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **Every audit line is chained to the one before it (`audit.chain`, on by default):** each record carries `prev`, the hash of the previous line (`genesis` for the first), inside the signed bytes, so a deleted, inserted or reordered whole line is found, not only a changed one. The chain follows rotation, a log from before the chain still verifies, and `python -m hydra_umc_voice_ui.audit` reports the broken lines as `chainBroken` and exits with 1. `GET /health` shows `audit.chain`. Tests with simulated logs only.
+
 - **README: the platform statement:** a note says that where the README speaks of the CM5 it means the pilot bench that runs today, and that the target platform of HYDRA-UMC, an NVIDIA Jetson Orin NX 16 GB, is a design that has not been built or tested.
 - **A fake microphone, recognizer and speaker around the real detector, gateway and alert composer:** `tests/test_fake_audio_devices.py` hands a recording to the streaming voice detector in blocks of 7 to 4096 samples, reads each utterance with a stand-in recognizer, runs the turns through the gateway with the wake word on (a status needs the wake word, a movement waits for confirmation, a stop is accepted with or without it, an unsure reading moves nothing), and plays anomaly verdicts in the eight languages to a fake speaker (spoken once per window, the critical window shorter, a good verdict silent, off by default). Simulator evidence only; no real microphone, wake word model, speech recognizer or loudspeaker was used.
 

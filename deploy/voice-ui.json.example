@@ -26,7 +26,8 @@
     "maxFiles": 5,
     "storeSubjectPlain": false,
     "transcriptHmac": true,
-    "hmacKeyFile": "/var/lib/hydra-umc/voice-ui-audit-hmac.key"
+    "hmacKeyFile": "/var/lib/hydra-umc/voice-ui-audit-hmac.key",
+    "chain": true
   },
   "alerts": {
     "enabled": false,
