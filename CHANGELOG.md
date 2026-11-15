@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The SDK pin and the shared tools are up to date:** the SDK dependency names the newest release tag, and the shared tools are the canonical copies again.
 - **The coverage of the tests is measured on every change:** the workflow "Coverage floor" runs the whole suite under line and branch coverage and fails when it falls under 93 %.
 - **The client of the documentation service is tested at its edges:** `tests/test_docs_qa_client_edges.py` runs it against an HTTP stand-in that answers with a definition, with nothing, with rubbish, with too much, with an error status and not at all, and checks what the person is told in each case, the cut of the answer and of the citation, the encoding of the code and that the token is sent only when there is a readable one.
 
