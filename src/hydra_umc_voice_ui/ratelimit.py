@@ -19,6 +19,7 @@ from collections import OrderedDict, deque
 from typing import Callable
 
 DEFAULT_REQUESTS_PER_MINUTE = 120
+UNAUTHENTICATED_REQUESTS_PER_MINUTE = 30
 MAX_TRACKED_CLIENTS = 1024
 
 

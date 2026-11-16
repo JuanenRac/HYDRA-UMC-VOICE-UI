@@ -19,7 +19,7 @@ from .alerts import AlertError, AlertSpeaker
 from .audit import AuditLog
 from .gateway import AssistantReply, VoiceTurn, VoiceTurnValidationError, confirm_pending_action, process_voice_turn
 from .metrics import Metrics
-from .ratelimit import DEFAULT_REQUESTS_PER_MINUTE, ClientRateLimiter
+from .ratelimit import DEFAULT_REQUESTS_PER_MINUTE, UNAUTHENTICATED_REQUESTS_PER_MINUTE, ClientRateLimiter
 from .speaker import SpeakerError, SpeakerStore
 from .voice_config import load_voice_config
 
@@ -40,6 +40,12 @@ class VoiceGatewayServer(ThreadingHTTPServer):
         if requests_per_minute is None:
             requests_per_minute = _configured_rate()
         self.limiter = ClientRateLimiter(requests_per_minute)
+        # Requests without the right token count against a smaller allowance of their own, so a flood of them (often from the same address as the
+        # SERVER that relays the real turns) cannot use up the allowance of the requests that are authorised, a stop among them.
+        # (the limit is off here when the main one is off)
+        self.unauthenticated_limiter = ClientRateLimiter(
+            0 if requests_per_minute == 0 else _configured_rate("HYDRA_UMC_VOICE_UI_UNAUTHENTICATED_RATE_PER_MINUTE", UNAUTHENTICATED_REQUESTS_PER_MINUTE)
+        )
         self.metrics = Metrics()
         # the optional voice features read their settings from the configuration file (voice_config.py); all of them are off by default
         config = load_voice_config()
@@ -60,17 +66,17 @@ def audit_outcome(reply: AssistantReply) -> str:
     return {"status": "acknowledged", "query_answer": "query_answered"}.get(code, code)
 
 
-def _configured_rate() -> int:
+def _configured_rate(name: str = "HYDRA_UMC_VOICE_UI_RATE_PER_MINUTE", default: int = DEFAULT_REQUESTS_PER_MINUTE) -> int:
     """HYDRA_UMC_VOICE_UI_RATE_PER_MINUTE: requests one client address may make a minute; 0 turns the limit off."""
-    raw = os.environ.get("HYDRA_UMC_VOICE_UI_RATE_PER_MINUTE", "")
+    raw = os.environ.get(name, "")
     if not raw:
-        return DEFAULT_REQUESTS_PER_MINUTE
+        return default
     try:
         value = int(raw)
     except ValueError as error:
-        raise ValueError("HYDRA_UMC_VOICE_UI_RATE_PER_MINUTE must be a whole number (0 turns the limit off)") from error
+        raise ValueError(f"{name} must be a whole number (0 turns the limit off)") from error
     if value < 0:
-        raise ValueError("HYDRA_UMC_VOICE_UI_RATE_PER_MINUTE must not be negative")
+        raise ValueError(f"{name} must not be negative")
     return value
 
 
@@ -155,12 +161,13 @@ class VoiceGatewayHandler(BaseHTTPRequestHandler):
         if self.path not in ("/v1/voice/turn", "/v1/voice/confirm", "/v1/voice/alert", "/v1/voice/speaker/enroll", "/v1/voice/speaker/forget"):
             self._write_json(HTTPStatus.NOT_FOUND, {"error": "not found"})
             return
-        allowed, wait = self.server.limiter.allow(self.client_address[0])
+        authorized = self._is_authorized()
+        allowed, wait = (self.server.limiter if authorized else self.server.unauthenticated_limiter).allow(self.client_address[0])
         if not allowed:
             self.server.metrics.refused("rate_limited")
             self._write_json(HTTPStatus.TOO_MANY_REQUESTS, {"error": "too many requests from this address", "retryAfterSeconds": round(wait, 1)})
             return
-        if not self._is_authorized():
+        if not authorized:
             self.server.metrics.refused("unauthorized")
             self._write_json(HTTPStatus.UNAUTHORIZED, {"error": "valid bearer token required"})
             return

@@ -86,6 +86,25 @@ def test_the_http_service_answers_429_past_the_limit_and_keeps_serving_others() 
         thread.join(timeout=2)
 
 
+def test_unauthenticated_requests_do_not_use_up_the_allowance_of_the_authorised_ones() -> None:
+    server = VoiceGatewayServer(("127.0.0.1", 0), "s" * 20, requests_per_minute=2)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        url = f"http://127.0.0.1:{server.server_address[1]}/v1/voice/turn"
+        turn = {"requestId": "r-1", "transcript": "status of robot 2", "locale": "en-US"}
+        # many requests without the token: refused, never the allowance of the authorised ones
+        statuses = [_post(url, turn)[0] for _ in range(40)]
+        assert statuses[0] == 401 and 429 in statuses
+        request = urllib.request.Request(url, data=json.dumps(turn).encode(), headers={"Content-Type": "application/json", "Authorization": "Bearer " + "s" * 20}, method="POST")
+        with urllib.request.urlopen(request, timeout=5) as resp:
+            assert resp.status == 200
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
 def test_the_limit_comes_from_the_environment_and_a_bad_value_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("HYDRA_UMC_VOICE_UI_RATE_PER_MINUTE", "7")
     server = VoiceGatewayServer(("127.0.0.1", 0), None)
