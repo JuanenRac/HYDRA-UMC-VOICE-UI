@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **Requests without the right token no longer use up the allowance of the authorised ones:** the check of the token now comes before the limit of requests, and a request without it counts against a smaller allowance of its own (30 a minute by default, `HYDRA_UMC_VOICE_UI_UNAUTHENTICATED_RATE_PER_MINUTE`, 0 turns it off), so a stop turn is not answered `429` because of an unauthenticated flood from the same address. A test covers it.
+
 
 ## [0.2.5]
 
