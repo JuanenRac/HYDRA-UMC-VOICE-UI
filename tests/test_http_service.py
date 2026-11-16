@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import socket
 import threading
+import time
 import urllib.error
 import urllib.request
 from collections.abc import Iterator
@@ -278,3 +279,41 @@ def test_an_idle_connection_is_dropped_by_the_handler_timeout() -> None:
     from hydra_umc_voice_ui.http_service import VoiceGatewayHandler
 
     assert VoiceGatewayHandler.timeout == 15.0
+
+
+def test_connections_over_the_limit_are_answered_503_and_the_slots_come_back() -> None:
+    server = VoiceGatewayServer(("127.0.0.1", 0), None, max_threads=2)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    port = server.server_address[1]
+    holders = []
+    try:
+        # two connections that send nothing keep both slots busy
+        for _ in range(2):
+            holders.append(socket.create_connection(("127.0.0.1", port)))
+        deadline = time.time() + 5
+        while time.time() < deadline and server._slots._value != 0:  # noqa: SLF001 - the slots in use
+            time.sleep(0.01)
+        with socket.create_connection(("127.0.0.1", port)) as extra:
+            extra.settimeout(5)
+            extra.sendall(b"GET /health HTTP/1.1\r\nHost: x\r\n\r\n")
+            answer = extra.recv(4096)
+        assert answer.startswith(b"HTTP/1.1 503")
+        assert server.refused == 1
+        for held in holders:
+            held.close()
+        deadline = time.time() + 5
+        while time.time() < deadline and server._slots._value != 2:  # noqa: SLF001
+            time.sleep(0.01)
+        assert server._slots._value == 2  # noqa: SLF001
+    finally:
+        for held in holders:
+            held.close()
+        server.shutdown()
+        server.server_close()
+
+
+@pytest.mark.parametrize("bad", [0, -1, 1025, True, "4"])
+def test_a_bad_thread_limit_is_refused(bad) -> None:
+    with pytest.raises(ValueError):
+        VoiceGatewayServer(("127.0.0.1", 0), None, max_threads=bad)

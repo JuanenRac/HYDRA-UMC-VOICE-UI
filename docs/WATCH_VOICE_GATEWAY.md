@@ -124,7 +124,7 @@ token: a restart only makes a pending confirmation ask to be repeated. The list
 of used nonces lives in memory and is bounded (16384, about 100 bytes each); when it is full the gateway
 refuses new confirmations instead of forgetting old ones. So that one client cannot fill it, the HTTP service
 limits how many requests an address may make a minute (120 by default, `HYDRA_UMC_VOICE_UI_RATE_PER_MINUTE`,
-0 turns the limit off): past it the answer is `429` with `retryAfterSeconds`. Requests without the right token count against a smaller allowance of their own (30 a minute by default, `HYDRA_UMC_VOICE_UI_UNAUTHENTICATED_RATE_PER_MINUTE`), so a flood of them cannot use up the allowance of the requests that are authorised, a stop among them. A confirmation can therefore never be replayed to
+0 turns the limit off): past it the answer is `429` with `retryAfterSeconds`. The service handles at most 32 requests at the same time (`HYDRA_UMC_VOICE_UI_MAX_THREADS`, 1 to 1024); one more is answered `503` with `Retry-After`. Requests without the right token count against a smaller allowance of their own (30 a minute by default, `HYDRA_UMC_VOICE_UI_UNAUTHENTICATED_RATE_PER_MINUTE`), so a flood of them cannot use up the allowance of the requests that are authorised, a stop among them. A confirmation can therefore never be replayed to
 authorize a *different*, later request - a changed parameter (a different
 mission, a different robot) always mints its own new, distinct token; the
 old one, if ever confirmed, still only ever confirms its own original,
