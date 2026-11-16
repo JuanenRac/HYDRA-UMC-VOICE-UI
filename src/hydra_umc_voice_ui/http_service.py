@@ -9,7 +9,10 @@ from __future__ import annotations
 import hmac
 import json
 import os
+import socket
+import threading
 from http import HTTPStatus
+from typing import Any
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Final
 from urllib.parse import parse_qs, urlparse
@@ -31,11 +34,34 @@ def is_loopback_host(host: str) -> bool:
     return host in {"127.0.0.1", "::1", "localhost"}
 
 
-class VoiceGatewayServer(ThreadingHTTPServer):
-    """HTTP server carrying immutable runtime security configuration."""
+DEFAULT_MAX_THREADS: Final = 32
 
-    def __init__(self, address: tuple[str, int], token: str | None, requests_per_minute: int | None = None) -> None:
+
+def _configured_max_threads() -> int:
+    """HYDRA_UMC_VOICE_UI_MAX_THREADS: requests handled at the same time (1 to 1024); a bad value falls back to the default."""
+    raw = os.environ.get("HYDRA_UMC_VOICE_UI_MAX_THREADS", "")
+    try:
+        value = int(raw)
+    except ValueError:
+        return DEFAULT_MAX_THREADS
+    return value if 1 <= value <= 1024 else DEFAULT_MAX_THREADS
+
+
+class VoiceGatewayServer(ThreadingHTTPServer):
+    """HTTP server carrying immutable runtime security configuration. It handles at most `max_threads` requests at the same time; one more is answered 503 and closed."""
+
+    daemon_threads = True
+
+    def __init__(self, address: tuple[str, int], token: str | None, requests_per_minute: int | None = None, max_threads: int | None = None) -> None:
         super().__init__(address, VoiceGatewayHandler)
+        if max_threads is None:
+            max_threads = _configured_max_threads()
+        if isinstance(max_threads, bool) or not isinstance(max_threads, int) or not 1 <= max_threads <= 1024:
+            self.server_close()
+            raise ValueError(f"max_threads must be an integer from 1 to 1024, got {max_threads!r}")
+        self.max_threads = max_threads
+        self.refused = 0
+        self._slots = threading.BoundedSemaphore(max_threads)
         self.token = token
         if requests_per_minute is None:
             requests_per_minute = _configured_rate()
@@ -52,6 +78,27 @@ class VoiceGatewayServer(ThreadingHTTPServer):
         self.audit = AuditLog(config.audit)
         self.alerts = AlertSpeaker(config.alerts)
         self.config_problems = config.problems
+
+    def process_request(self, request: Any, client_address: Any) -> None:
+        if not self._slots.acquire(blocking=False):
+            self.refused += 1
+            try:
+                request.sendall(b"HTTP/1.1 503 Service Unavailable\r\nRetry-After: 1\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+                # read for an instant what the client already sent: a connection closed with unread data is reset and the client would lose the 503
+                request.shutdown(socket.SHUT_WR)
+                request.settimeout(0.05)
+                request.recv(4096)
+            except OSError:
+                pass
+            self.shutdown_request(request)
+            return
+        super().process_request(request, client_address)
+
+    def process_request_thread(self, request: Any, client_address: Any) -> None:
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._slots.release()
 
     def speaker_store(self) -> SpeakerStore:
         speaker = load_voice_config().speaker
