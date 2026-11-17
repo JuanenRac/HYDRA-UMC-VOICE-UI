@@ -22,6 +22,8 @@ from __future__ import annotations
 import re
 
 from .intent import (
+    _NEGATION,
+    _RULES,
     INTENT_GO_HOME,
     INTENT_START_MISSION,
     INTENT_STATUS,
@@ -108,3 +110,41 @@ def language_matches(text: str) -> list[tuple[str, dict[str, str]]]:
 def is_negated(text: str) -> bool:
     """Whether the sentence carries a word of negation of any of the added languages."""
     return any(pattern.search(text) is not None for pattern in NEGATIONS)
+
+
+# --- a spoken stop wins over a negation that is not next to it -------------------------------------------------------------------------------
+
+_WORD = re.compile(r"[\w']+")
+_AFTER_STOP = re.compile(r"^(?:pas|jamais|nicht)$", _I)
+_CJK_NEGATIONS = NEGATIONS[-2:]     # Japanese and Chinese: the negation is written inside the same run of characters
+
+
+def _stop_patterns() -> list[re.Pattern[str]]:
+    patterns = [pattern for name, pattern in _RULES if name == INTENT_STOP]
+    for rules in LANGUAGE_RULES.values():
+        patterns.extend(pattern for name, pattern in rules if name == INTENT_STOP)
+    return patterns
+
+
+def _negates(words: str) -> bool:
+    return _NEGATION.search(words) is not None or is_negated(words)
+
+
+def stop_requested(text: str) -> bool:
+    """Whether `text` says a stop that no negation is next to: "stop, no, stop" and "stop the mission status" ask for a stop, "don't stop", "ne t'arrete pas"
+    and "止めないで" do not. A negation counts only inside two words before the stop word (one word after it in French and German; three and four characters
+    around it in Japanese and Chinese); a negation farther away says something else."""
+    for pattern in _stop_patterns():
+        for match in pattern.finditer(text):
+            before = _WORD.findall(text[:match.start()])[-2:]
+            after = _WORD.findall(text[match.end():])[:1]
+            near = " ".join(before)
+            if before and _negates(near):
+                continue
+            if after and _AFTER_STOP.fullmatch(after[0]):
+                continue
+            around = text[max(0, match.start() - 3):match.end() + 4]
+            if any(negation.search(around) is not None for negation in _CJK_NEGATIONS) and not text.isascii():
+                continue
+            return True
+    return False

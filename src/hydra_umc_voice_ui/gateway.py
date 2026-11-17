@@ -49,6 +49,7 @@ from .intent import (
     INTENT_STATUS,
     INTENT_STOP,
     Intent,
+    IntentClassification,
     classify_intent,
     normalize_text,
 )
@@ -522,6 +523,14 @@ def process_voice_turn(
         if stripped != turn.transcript and stripped:
             turn = replace(turn, transcript=stripped)
     classification = classify_intent(turn.transcript)
+    stop_won = False
+    if config.wake.stop_wins and classification.stop_requested and not (
+        classification.is_unambiguous and not classification.negated and classification.matches[0].name == INTENT_STOP
+    ):
+        # a stop that no negation is next to wins over a far negation and over another command in the same sentence: a stop read wrongly costs nothing
+        stop = next(match for match in classification.matches if match.name == INTENT_STOP)
+        classification = IntentClassification(matches=(stop,), negated=False, stop_requested=True)
+        stop_won = True
     language = language_of(turn.locale)
 
     def said(code: str, **parameters: str) -> dict[str, Any]:
@@ -538,6 +547,8 @@ def process_voice_turn(
         interpretation["heardText"] = turn.transcript
         interpretation["normalizedText"] = normalize_text(turn.transcript)
     interpretation["matchedRules"] = sorted({match.name for match in classification.matches})
+    if stop_won:
+        interpretation["stopWins"] = True
     if not activated:
         # without the wake word nothing is done, except a spoken stop (it costs nothing if it was a mistake) unless the site asks for the word too
         is_stop = classification.is_unambiguous and not classification.negated and classification.matches[0].name == INTENT_STOP
