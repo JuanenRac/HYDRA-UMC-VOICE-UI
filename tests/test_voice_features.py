@@ -732,7 +732,7 @@ def test_http_enrol_identify_forget_and_audit(monkeypatch: pytest.MonkeyPatch, t
         assert _call(f"{base}/v1/voice/turn", stranger, token)[1]["messageCode"] == "speaker_not_authorised"
         records = _call(f"{base}/v1/voice/audit?limit=10", token=token)[1]["records"]
         assert [(r["event"], r["outcome"]) for r in records] == [
-            ("turn", "confirmation_required"), ("confirm", "confirmed"), ("turn", "speaker_not_authorised"),
+            ("enroll", "enrolled"), ("turn", "confirmation_required"), ("confirm", "confirmed"), ("turn", "speaker_not_authorised"),
         ]
         assert "ana" not in json.dumps(records) and "alpha" not in json.dumps(records)
         assert _call(f"{base}/v1/voice/audit", token=None)[0] == 401
