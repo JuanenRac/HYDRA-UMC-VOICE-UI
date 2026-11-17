@@ -23,6 +23,9 @@ from hydra_umc_voice_ui.gateway import (
     process_voice_turn,
 )
 from hydra_umc_voice_ui.http_service import create_voice_gateway
+from hydra_umc_voice_ui.voice_config import VoiceConfig, WakeConfig
+
+STOP_DOES_NOT_WIN = VoiceConfig(wake=WakeConfig(stop_wins=False))   # the reading of a sentence with a stop and another command before `wake.stopWins`
 
 NOW = datetime(2026, 1, 5, 10, 0, 0, tzinfo=timezone.utc)
 
@@ -75,7 +78,7 @@ def test_ambiguous_turn_is_rejected_not_silently_guessed() -> None:
         "requestId": "watch-voice-003",
         "transcript": "stop the status check",
         "locale": "en-US",
-    }))
+    }), voice_config=STOP_DOES_NOT_WIN)
 
     assert reply.intent is None
     assert reply.requires_confirmation is False
@@ -304,7 +307,7 @@ def test_every_reply_says_what_was_heard_and_which_rules_matched() -> None:
 def test_a_request_that_matched_nothing_or_several_rules_still_records_how_it_was_read() -> None:
     nothing = process_voice_turn(_turn("play some music"))
     assert nothing.interpretation["matchedRules"] == []
-    several = process_voice_turn(_turn("stop and give me the status"))
+    several = process_voice_turn(_turn("stop and give me the status"), voice_config=STOP_DOES_NOT_WIN)
     assert several.interpretation["matchedRules"] == ["status", "stop"]
     assert several.intent is None and not several.requires_confirmation
 

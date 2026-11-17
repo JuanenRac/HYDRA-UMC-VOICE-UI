@@ -301,11 +301,14 @@ class VoiceGatewayHandler(BaseHTTPRequestHandler):
         try:
             if self.path.endswith("/enroll"):
                 store.enroll(alias, payload.get("vector"))  # type: ignore[arg-type]
+                self.server.audit.record("enroll", request_id=None, intent=None, outcome="enrolled", subject=alias if isinstance(alias, str) else "")
                 self._write_json(HTTPStatus.OK, {"enrolled": True, "operators": len(store.aliases())})
             else:
                 if not isinstance(alias, str):
                     raise SpeakerError("subject must be text")
-                self._write_json(HTTPStatus.OK, {"forgotten": store.forget(alias), "operators": len(store.aliases())})
+                forgotten = store.forget(alias)
+                self.server.audit.record("forget", request_id=None, intent=None, outcome="forgotten" if forgotten else "other", subject=alias)
+                self._write_json(HTTPStatus.OK, {"forgotten": forgotten, "operators": len(store.aliases())})
         except SpeakerError as error:
             self.server.metrics.refused("bad_request")
             self._write_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})

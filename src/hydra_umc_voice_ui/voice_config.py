@@ -13,7 +13,7 @@ Every optional feature is OFF in the defaults except the audit log, which is ON 
 
     {
       "stateDir": "/var/lib/hydra-umc",
-      "wake":    {"enabled": false, "phrases": ["hydra"], "allowPushToTalk": true, "stopNeedsWake": false, "stopWins": false},
+      "wake":    {"enabled": false, "phrases": ["hydra"], "allowPushToTalk": true, "stopNeedsWake": false, "stopWins": true},
       "speaker": {"enabled": false, "storeFile": "/var/lib/hydra-umc/voice-ui-speakers.json", "threshold": 0.85, "margin": 0.05, "maxSpeakers": 16},
       "queries": {"enabled": false, "docsQaUrl": "http://127.0.0.1:8110", "tokenFile": "", "timeoutSeconds": 3.0, "maxAnswerChars": 400},
       "audit":   {"enabled": true, "file": "/var/lib/hydra-umc/voice-ui-audit.jsonl", "maxBytes": 1048576, "maxFiles": 5, "storeSubjectPlain": false,
@@ -76,7 +76,7 @@ class WakeConfig:
     stop_needs_wake: bool = False
     # a spoken stop wins over a negation that is not next to it ("stop, no, stop") and over an ambiguity ("stop the mission status"); off by default,
     # which keeps the previous reading (such a sentence is answered with a request to say it again)
-    stop_wins: bool = False
+    stop_wins: bool = True
 
 
 @dataclass(frozen=True)

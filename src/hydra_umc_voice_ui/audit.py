@@ -5,7 +5,7 @@
 # =============================================================================
 """The audit log of the voice commands: who asked for what, and what came of it.
 
-For traceability, not for surveillance. A record holds the request id, the kind of event, the intent that was understood, the outcome (a short
+For traceability, not for surveillance. A record holds the request id, the kind of event (a turn, a confirmation, or an operator's voice being enrolled or forgotten), the intent that was understood, the outcome (a short
 code from a closed list), whether a confirmation was asked and how it ended, and who it was for. It never holds the transcript, the audio,
 a voice vector, the locale or an address.
 
@@ -48,7 +48,7 @@ MAX_READ = 200
 OUTCOMES = frozenset({
     "acknowledged", "confirmation_required", "stop_now", "negation", "no_match", "ambiguous", "not_sure", "not_activated",
     "speaker_not_authorised", "query_answered", "query_not_found", "query_unavailable", "query_off",
-    "confirmed", "expired", "invalid",
+    "confirmed", "expired", "invalid", "enrolled", "forgotten",
 })
 
 
@@ -253,7 +253,7 @@ class AuditLog:
         try:
             record: dict[str, object] = {
                 "ts": stamp,
-                "event": event if event in ("turn", "confirm") else "turn",
+                "event": event if event in ("turn", "confirm", "enroll", "forget") else "turn",
                 "requestId": request_id or "",
                 "intent": intent or "",
                 "outcome": outcome if outcome in OUTCOMES else "other",
