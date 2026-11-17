@@ -47,7 +47,9 @@ def test_the_gateway_stops_when_the_stop_wins_and_asks_again_when_it_is_off(monk
     assert on.interpretation["stopWins"] is True
     ambiguous = process_voice_turn(_turn("stop the mission status"), voice_config=on_config)
     assert ambiguous.intent is not None and ambiguous.intent.name == INTENT_STOP
-    for off in (VoiceConfig(), VoiceConfig(wake=WakeConfig(stop_wins=False))):
+    default = process_voice_turn(_turn("stop, no, stop"), voice_config=VoiceConfig())   # on by default
+    assert default.intent is not None and default.intent.name == INTENT_STOP
+    for off in (VoiceConfig(wake=WakeConfig(stop_wins=False)),):
         assert process_voice_turn(_turn("stop, no, stop"), voice_config=off).intent is None
         assert process_voice_turn(_turn("stop the mission status"), voice_config=off).intent is None
 
@@ -57,8 +59,9 @@ def test_a_negation_next_to_the_stop_is_still_answered_as_negated() -> None:
     assert reply.intent is None and reply.message_code == "negation"
 
 
-def test_the_setting_is_read_from_the_file_and_is_off_by_default() -> None:
-    assert VoiceConfig().wake.stop_wins is False
+def test_the_setting_is_read_from_the_file_and_is_on_by_default() -> None:
+    assert VoiceConfig().wake.stop_wins is True
+    assert parse_voice_config({"wake": {"stopWins": False}}).wake.stop_wins is False
     assert parse_voice_config({"wake": {"stopWins": True}}).wake.stop_wins is True
     assert "stopWins" not in " ".join(parse_voice_config({"wake": {"stopWins": True}}).problems)
-    assert parse_voice_config({"wake": {"stopWins": "yes"}}).wake.stop_wins is False  # not a true or false: ignored, the default stays
+    assert parse_voice_config({"wake": {"stopWins": "yes"}}).wake.stop_wins is True  # not a true or false: ignored, the default stays

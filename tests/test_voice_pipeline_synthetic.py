@@ -18,6 +18,7 @@ import pytest
 
 from hydra_umc_voice_ui.audio import detect_voice_segments, load_wav
 from hydra_umc_voice_ui.gateway import VoiceTurn, process_voice_turn
+from hydra_umc_voice_ui.voice_config import VoiceConfig, WakeConfig
 
 RATE = 8000
 NOW = datetime(2026, 1, 5, 10, 0, 0, tzinfo=timezone.utc)
@@ -108,8 +109,11 @@ def test_a_negated_command_in_any_language_is_never_run(tmp_path: Path) -> None:
 
 
 def test_two_commands_in_one_utterance_are_asked_to_be_said_one_at_a_time() -> None:
-    reply = process_voice_turn(_turn(1, "stopp und status", locale="de-DE"), now=NOW)
+    reply = process_voice_turn(_turn(1, "stopp und status", locale="de-DE"), now=NOW, voice_config=VoiceConfig(wake=WakeConfig(stop_wins=False)))
     assert reply.intent is None and reply.requires_confirmation is False
+    # with `wake.stopWins` (the default) the stop in the sentence wins
+    stopped = process_voice_turn(_turn(2, "stopp und status", locale="de-DE"), now=NOW)
+    assert stopped.intent is not None and stopped.intent.name == "stop"
 
 
 def test_a_movement_waits_for_the_confirmation_of_the_primary_device_in_every_language() -> None:
