@@ -3,7 +3,8 @@
     "enabled": false,
     "phrases": ["hydra"],
     "allowPushToTalk": true,
-    "stopNeedsWake": false
+    "stopNeedsWake": false,
+    "stopWins": false
   },
   "speaker": {
     "enabled": false,

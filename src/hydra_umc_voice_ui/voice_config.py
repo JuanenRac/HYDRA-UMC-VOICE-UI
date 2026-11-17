@@ -13,7 +13,7 @@ Every optional feature is OFF in the defaults except the audit log, which is ON 
 
     {
       "stateDir": "/var/lib/hydra-umc",
-      "wake":    {"enabled": false, "phrases": ["hydra"], "allowPushToTalk": true, "stopNeedsWake": false},
+      "wake":    {"enabled": false, "phrases": ["hydra"], "allowPushToTalk": true, "stopNeedsWake": false, "stopWins": false},
       "speaker": {"enabled": false, "storeFile": "/var/lib/hydra-umc/voice-ui-speakers.json", "threshold": 0.85, "margin": 0.05, "maxSpeakers": 16},
       "queries": {"enabled": false, "docsQaUrl": "http://127.0.0.1:8110", "tokenFile": "", "timeoutSeconds": 3.0, "maxAnswerChars": 400},
       "audit":   {"enabled": true, "file": "/var/lib/hydra-umc/voice-ui-audit.jsonl", "maxBytes": 1048576, "maxFiles": 5, "storeSubjectPlain": false,
@@ -74,6 +74,9 @@ class WakeConfig:
     allow_push_to_talk: bool = True
     # a spoken stop is accepted without the wake word (a stop read wrongly costs nothing); true asks for it too
     stop_needs_wake: bool = False
+    # a spoken stop wins over a negation that is not next to it ("stop, no, stop") and over an ambiguity ("stop the mission status"); off by default,
+    # which keeps the previous reading (such a sentence is answered with a request to say it again)
+    stop_wins: bool = False
 
 
 @dataclass(frozen=True)
@@ -193,7 +196,7 @@ def parse_voice_config(raw: object) -> VoiceConfig:
         state_dir = default_state_dir()
 
     s = _section(raw, "wake", problems)
-    _unknown(s, ("enabled", "phrases", "allowPushToTalk", "stopNeedsWake"), "wake", problems)
+    _unknown(s, ("enabled", "phrases", "allowPushToTalk", "stopNeedsWake", "stopWins"), "wake", problems)
     d = WakeConfig()
     phrases = d.phrases
     if "phrases" in s:
@@ -207,6 +210,7 @@ def parse_voice_config(raw: object) -> VoiceConfig:
         phrases=phrases,
         allow_push_to_talk=_bool(s, "allowPushToTalk", d.allow_push_to_talk, problems, "wake"),
         stop_needs_wake=_bool(s, "stopNeedsWake", d.stop_needs_wake, problems, "wake"),
+        stop_wins=_bool(s, "stopWins", d.stop_wins, problems, "wake"),
     )
 
     s = _section(raw, "speaker", problems)

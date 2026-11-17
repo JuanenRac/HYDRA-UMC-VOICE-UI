@@ -121,6 +121,9 @@ class IntentClassification:
     matches: tuple[Intent, ...]
     # True when the text contains a negation word next to a recognized command
     negated: bool = False
+    # True when a stop is said and no negation is next to it (intent_languages.stop_requested); the gateway lets that stop win over a far
+    # negation and over an ambiguity when wake.stopWins is on
+    stop_requested: bool = False
 
     @property
     def is_no_match(self) -> bool:
@@ -145,7 +148,7 @@ def classify_intent(text: str) -> IntentClassification:
     the operator to clarify, never silently resolve on its own.
     """
     # the phrases of the seven other languages are an addition (see intent_languages.py); imported here because that module needs the names above
-    from .intent_languages import is_negated, language_matches
+    from .intent_languages import is_negated, language_matches, stop_requested
     from .node_query import node_query_matches
     from .queries import query_matches
 
@@ -177,4 +180,5 @@ def classify_intent(text: str) -> IntentClassification:
     return IntentClassification(
         matches=tuple(matches),
         negated=bool(matches) and (_NEGATION.search(plain) is not None or is_negated(plain)),
+        stop_requested=any(match.name == INTENT_STOP for match in matches) and stop_requested(plain),
     )
