@@ -63,6 +63,8 @@ class VoiceGatewayServer(ThreadingHTTPServer):
         self.refused = 0
         self._slots = threading.BoundedSemaphore(max_threads)
         self.token = token
+        # a token of its own for enrolling and forgetting voices (HYDRA_UMC_VOICE_UI_ENROLL_TOKEN); when it is set, only it is taken on /v1/voice/speaker/*
+        self.enroll_token = os.environ.get(ENROLL_TOKEN_ENV, "").strip() or None
         if requests_per_minute is None:
             requests_per_minute = _configured_rate()
         self.limiter = ClientRateLimiter(requests_per_minute)
@@ -151,6 +153,8 @@ class VoiceGatewayHandler(BaseHTTPRequestHandler):
 
     def _is_authorized(self) -> bool:
         expected = self.server.token
+        if self.path.startswith("/v1/voice/speaker/") and self.server.enroll_token:
+            expected = self.server.enroll_token   # the voices have a credential of their own: the token of the turns does not enrol or forget
         if not expected:
             return True
         received = self.headers.get("Authorization", "")
@@ -286,7 +290,7 @@ class VoiceGatewayHandler(BaseHTTPRequestHandler):
         if not config.speaker.enabled:
             self._write_json(HTTPStatus.CONFLICT, {"error": "speaker identification is switched off (speaker.enabled)"})
             return
-        if not self.server.token:
+        if not self.server.token and not self.server.enroll_token:
             self._write_json(HTTPStatus.FORBIDDEN, {"error": "enrolling or forgetting a voice needs a bearer token"})
             return
         if not isinstance(payload, dict):
@@ -307,6 +311,9 @@ class VoiceGatewayHandler(BaseHTTPRequestHandler):
             self._write_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
         except OSError:
             self._write_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": "the voice store could not be written"})
+
+
+ENROLL_TOKEN_ENV = "HYDRA_UMC_VOICE_UI_ENROLL_TOKEN"
 
 
 def create_voice_gateway(host: str, port: int, token: str | None = None) -> VoiceGatewayServer:
