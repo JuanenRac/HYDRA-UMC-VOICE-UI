@@ -22,7 +22,7 @@
 #   docker run -e HYDRA_UMC_VOICE_UI_TOKEN=... hydra-umc-voice-ui:1.0.0
 # The container will refuse to start without it, exactly as intended.
 
-FROM python:3.12-slim
+FROM python:3.15-slim
 
 WORKDIR /app
 COPY pyproject.toml README.md LICENSE.md ./
