@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.2.6]
+
 - **Enrolling and forgetting an operator's voice are written to the audit log:** each call to `/v1/voice/speaker/enroll` and `/forget` adds a signed, chained record (`event` `enroll` or `forget`, outcome `enrolled` or `forgotten`) with the operator as the keyed hash used by the other records, never the name, the voice vector or an address. A test covers it.
 
 - **Enrolling and forgetting voices can have a credential of their own:** with `HYDRA_UMC_VOICE_UI_ENROLL_TOKEN` set, `POST /v1/voice/speaker/enroll` and `/forget` take only that bearer token, so the token that the server uses for the turns can no longer change who is an enrolled operator. Without the variable nothing changes (the service token is the one).
@@ -13,6 +15,7 @@ All notable changes to this project are documented here.
 - **The voice service handles a bounded number of requests at the same time:** it serves at most 32 requests at once (`HYDRA_UMC_VOICE_UI_MAX_THREADS`, 1 to 1024) and answers one more with `503` and `Retry-After`, instead of starting a thread for each connection, so a flood of connections cannot exhaust the memory of the gateway. Tested with connections held open.
 - **Requests without the right token no longer use up the allowance of the authorised ones:** the check of the token now comes before the limit of requests, and a request without it counts against a smaller allowance of its own (30 a minute by default, `HYDRA_UMC_VOICE_UI_UNAUTHENTICATED_RATE_PER_MINUTE`, 0 turns it off), so a stop turn is not answered `429` because of an unauthenticated flood from the same address. A test covers it.
 
+- Build version synchronized with `hydra-umc.project.json` and the repository-native version source.
 
 ## [0.2.5]
 
