@@ -14,9 +14,15 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import http.client
+import json
 import os
 import re
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
 from typing import Any
 
 KINDS = ("approval", "voice")
@@ -103,3 +109,66 @@ def verify_proof(key: bytes, proof: Any, *, expected_action_id: str, expected_su
     if "approval_id" not in proof:
         return False, "the proof has no identity to accept it only once"
     return True, ""
+
+
+# Asking HYDRA-UMC-COGNITIVE-NODE ----------------------------------------------------------------------------------------------------
+# The layer that holds a confirmation asks the node whether it may be executed, with the subject and, when it signed one, the proof.
+# Anything but a clear "allow" (no answer, an error, a redirect, another decision) is a refusal.
+
+ASK_TIMEOUT_SECONDS = 3.0
+UNREACHABLE = "the cognitive node could not be asked"
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req: Any, fp: Any, code: int, msg: str, headers: Any, newurl: str) -> None:
+        return None
+
+
+def check_node_url(url: str) -> str:
+    """The base address of the node without a trailing slash; ValueError when it is not a plain http(s) address."""
+    parts = urllib.parse.urlsplit(url.strip())
+    if parts.scheme not in ("http", "https") or not parts.hostname or parts.username or parts.password or parts.query or parts.fragment:
+        raise ValueError("the address of the cognitive node must be http://host[:port] or https://host[:port]")
+    return url.strip().rstrip("/")
+
+
+def load_node_token(path: str) -> str:
+    """The bearer token for the node ("" without a file); ValueError when a named file cannot be used."""
+    if not path:
+        return ""
+    try:
+        token = Path(path).read_text(encoding="utf-8").strip()
+    except (OSError, UnicodeDecodeError) as error:
+        raise ValueError(f"the token file of the cognitive node cannot be read: {type(error).__name__}") from error
+    if len(token) < 16 or not token.isascii() or not token.isprintable():
+        raise ValueError("the token of the cognitive node must have at least 16 printable characters")
+    return token
+
+
+def ask_autonomy(url: str, token: str, *, source: str, kind: str, action_id: str, subject_id: str, proof: dict[str, Any] | None,
+                 timeout: float = ASK_TIMEOUT_SECONDS) -> tuple[bool, str]:
+    """(True, "") only when the node allows `execute_with_confirmation` for this action and subject; else (False, why)."""
+    question: dict[str, Any] = {"source": source, "kind": kind, "actionId": action_id, "level": "execute_with_confirmation",
+                                "humanConfirmed": True, "subjectId": subject_id}
+    if proof is not None:
+        question["confirmationProof"] = proof
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["Authorization"] = "Bearer " + token
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
+    try:
+        request = urllib.request.Request(check_node_url(url) + "/autonomy/evaluate", data=json.dumps(question).encode("utf-8"), headers=headers, method="POST")
+        with opener.open(request, timeout=timeout) as response:
+            answer = json.loads(response.read(65536))
+    except urllib.error.HTTPError as error:
+        error.close()
+        return False, UNREACHABLE
+    except (OSError, ValueError, http.client.HTTPException):
+        return False, UNREACHABLE
+    if not isinstance(answer, dict):
+        return False, UNREACHABLE
+    if answer.get("decision") == "allow":
+        return True, ""
+    reason = answer.get("reason")
+    shown = reason if isinstance(reason, str) and re.fullmatch(r"[a-z_]{1,64}", reason) else "no reason given"
+    return False, f"the autonomy policy did not allow it ({shown})"
