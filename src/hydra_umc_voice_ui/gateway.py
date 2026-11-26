@@ -40,6 +40,7 @@ from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta, timezone
 import re
 
+from .confirmation_proof import load_proof_key, proof_identifier, sign_proof
 from .messages import language_of, message
 from .intent import (
     INTENT_GO_HOME,
@@ -148,6 +149,26 @@ def result_key(environ: dict[str, str] | None = None) -> bytes | None:
     if len(configured) < MIN_RESULT_KEY_LENGTH:
         raise ValueError(f"{RESULT_KEY_ENV} must be at least {MIN_RESULT_KEY_LENGTH} characters")
     return configured.encode("utf-8")
+
+
+PROOF_KEY_ENV = "HYDRA_UMC_VOICE_UI_PROOF_KEY_FILE"
+PROOF_SUBJECT_ENV = "HYDRA_UMC_VOICE_UI_PROOF_SUBJECT"
+PROOF_VALIDITY_MS = 30_000
+
+
+def confirmation_proof_of(request_id: str, entities: dict[str, str] | None, operator: str, now: datetime, environ: dict[str, str] | None = None) -> dict[str, object] | None:
+    """The ConfirmationProof of a confirmed spoken request (None without a key file): the request id as the action, the robot it names (else the id of the
+    installation) as the subject. A key file that cannot be used raises ValueError."""
+    env = os.environ if environ is None else environ
+    path = env.get(PROOF_KEY_ENV, "").strip()
+    if not path:
+        return None
+    named = (entities or {}).get("robotId") or (entities or {}).get("robot")
+    subject = named or env.get(PROOF_SUBJECT_ENV, "").strip() or "installation"
+    approved = int(now.timestamp() * 1000)
+    return sign_proof(load_proof_key(path), kind="voice", action_id=proof_identifier(request_id), subject_id=proof_identifier(str(subject)),
+                      operator=proof_identifier(operator or "unnamed"), approved_at_ms=approved, expires_at_ms=approved + PROOF_VALIDITY_MS,
+                      approval_id=secrets.token_hex(16))
 
 
 SIGNED_FIELDS = ("type", "status", "requestId", "intent", "subject", "confirmedAtUtc", "nonce")
@@ -746,6 +767,7 @@ class ConfirmationResult:
     subject: str | None = None
     confirmed_at: str | None = None
     nonce: str | None = None
+    proof: dict[str, object] | None = None
 
     def to_payload(self) -> dict[str, object]:
         payload: dict[str, object] = {"type": "confirmation_result", "status": self.status, "reason": self.reason}
@@ -764,6 +786,8 @@ class ConfirmationResult:
             key = result_key()
             if key is not None:
                 payload["signature"] = sign_result(payload, key)
+            if self.proof is not None:
+                payload["confirmationProof"] = self.proof
         return payload
 
 
@@ -833,4 +857,5 @@ def confirm_pending_action(confirmation_token: object, *, subject: object = None
         entities=dict(pending.entities), age_seconds=age,
         reason=f"{pending.intent_name} confirmed {age:.1f}s after being requested - execution still requires the authenticated primary control",
         subject=pending.subject, confirmed_at=now.astimezone(timezone.utc).isoformat(), nonce=pending.nonce,
+        proof=confirmation_proof_of(pending.request_id, dict(pending.entities), pending.subject, now),
     )

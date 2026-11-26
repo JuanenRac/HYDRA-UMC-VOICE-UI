@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A confirmed spoken request can carry the shared proof:** with `HYDRA_UMC_VOICE_UI_PROOF_KEY_FILE` a confirmed result has `confirmationProof` (the `ConfirmationProof` of the SDK: the request id, the robot it names or the installation, who confirmed, 30 seconds, an identity for one use). Off without the key file.
+
 ## [0.2.6]
 
 - **Enrolling and forgetting an operator's voice are written to the audit log:** each call to `/v1/voice/speaker/enroll` and `/forget` adds a signed, chained record (`event` `enroll` or `forget`, outcome `enrolled` or `forgotten`) with the operator as the keyed hash used by the other records, never the name, the voice vector or an address. A test covers it.

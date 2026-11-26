@@ -188,3 +188,7 @@ The audit log is on by default (`audit.enabled`, switch it off with `"enabled": 
 ### Alerts read aloud
 
 `POST /v1/voice/alert` takes `{"alertId", "source": "system-status" | "anomaly", "severity": "info" | "warning" | "critical", "locale", ...}` and answers with the sentence to say and `speak` (whether to say it now). For `anomaly` the body also has `node` and `verdict` (`normal`, `suspect`, `anomalous`) and the sentence is a fixed one in the eight languages; a `normal` verdict is never spoken. For `system-status` it has `text`, the `speak` text the Server wrote, cleaned and cut to `alerts.maxChars`. With `alerts.enabled` off nothing is to be spoken (`reason: alerts_off`); an alert below `alerts.minSeverity` is not (`below_threshold`), and the same alert is not repeated inside `alerts.repeatSeconds` (`alerts.criticalRepeatSeconds` for a critical one). The device produces the sound.
+
+## Confirmation proof
+
+With `HYDRA_UMC_VOICE_UI_PROOF_KEY_FILE` (off by default; one line of at least 32 characters, mode 600) a confirmed result also carries `confirmationProof`, the `ConfirmationProof` of HYDRA-UMC-SDK: `kind` `voice`, `action_id` the request id, `subject_id` the robot the request names, else `HYDRA_UMC_VOICE_UI_PROOF_SUBJECT` (default `installation`), valid for 30 seconds. Give the same key file to the layer that acts.
