@@ -36,6 +36,7 @@ import json
 import os
 import secrets
 import threading
+from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta, timezone
 import re
@@ -158,7 +159,7 @@ COGNITIVE_URL_ENV = "HYDRA_UMC_VOICE_UI_COGNITIVE_URL"
 COGNITIVE_TOKEN_FILE_ENV = "HYDRA_UMC_VOICE_UI_COGNITIVE_TOKEN_FILE"
 
 
-def proof_subject(entities: dict[str, str] | None, environ: dict[str, str] | None = None) -> str:
+def proof_subject(entities: dict[str, str] | None, environ: Mapping[str, str] | None = None) -> str:
     """The robot a spoken request names, else the id of the installation."""
     env = os.environ if environ is None else environ
     named = (entities or {}).get("robotId") or (entities or {}).get("robot")
@@ -166,7 +167,7 @@ def proof_subject(entities: dict[str, str] | None, environ: dict[str, str] | Non
 
 
 def cognitive_node_refusal(request_id: str, entities: dict[str, str] | None, proof: dict[str, object] | None,
-                           environ: dict[str, str] | None = None) -> str | None:
+                           environ: Mapping[str, str] | None = None) -> str | None:
     """None when no cognitive node is configured or when it allows the confirmed request; else why it is not honoured."""
     env = os.environ if environ is None else environ
     url = env.get(COGNITIVE_URL_ENV, "").strip()
