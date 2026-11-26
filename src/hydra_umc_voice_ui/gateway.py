@@ -36,11 +36,12 @@ import json
 import os
 import secrets
 import threading
+from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta, timezone
 import re
 
-from .confirmation_proof import load_proof_key, proof_identifier, sign_proof
+from .confirmation_proof import ask_autonomy, load_node_token, load_proof_key, proof_identifier, sign_proof
 from .messages import language_of, message
 from .intent import (
     INTENT_GO_HOME,
@@ -154,6 +155,31 @@ def result_key(environ: dict[str, str] | None = None) -> bytes | None:
 PROOF_KEY_ENV = "HYDRA_UMC_VOICE_UI_PROOF_KEY_FILE"
 PROOF_SUBJECT_ENV = "HYDRA_UMC_VOICE_UI_PROOF_SUBJECT"
 PROOF_VALIDITY_MS = 30_000
+COGNITIVE_URL_ENV = "HYDRA_UMC_VOICE_UI_COGNITIVE_URL"
+COGNITIVE_TOKEN_FILE_ENV = "HYDRA_UMC_VOICE_UI_COGNITIVE_TOKEN_FILE"
+
+
+def proof_subject(entities: dict[str, str] | None, environ: Mapping[str, str] | None = None) -> str:
+    """The robot a spoken request names, else the id of the installation."""
+    env = os.environ if environ is None else environ
+    named = (entities or {}).get("robotId") or (entities or {}).get("robot")
+    return proof_identifier(str(named or env.get(PROOF_SUBJECT_ENV, "").strip() or "installation"))
+
+
+def cognitive_node_refusal(request_id: str, entities: dict[str, str] | None, proof: dict[str, object] | None,
+                           environ: Mapping[str, str] | None = None) -> str | None:
+    """None when no cognitive node is configured or when it allows the confirmed request; else why it is not honoured."""
+    env = os.environ if environ is None else environ
+    url = env.get(COGNITIVE_URL_ENV, "").strip()
+    if not url:
+        return None
+    try:
+        token = load_node_token(env.get(COGNITIVE_TOKEN_FILE_ENV, "").strip())
+    except ValueError as error:
+        return str(error)
+    allowed, why = ask_autonomy(url, token, source="voice-ui", kind="intent", action_id=proof_identifier(request_id),
+                                subject_id=proof_subject(entities, env), proof=proof)
+    return None if allowed else why
 
 
 def confirmation_proof_of(request_id: str, entities: dict[str, str] | None, operator: str, now: datetime, environ: dict[str, str] | None = None) -> dict[str, object] | None:
@@ -163,10 +189,8 @@ def confirmation_proof_of(request_id: str, entities: dict[str, str] | None, oper
     path = env.get(PROOF_KEY_ENV, "").strip()
     if not path:
         return None
-    named = (entities or {}).get("robotId") or (entities or {}).get("robot")
-    subject = named or env.get(PROOF_SUBJECT_ENV, "").strip() or "installation"
     approved = int(now.timestamp() * 1000)
-    return sign_proof(load_proof_key(path), kind="voice", action_id=proof_identifier(request_id), subject_id=proof_identifier(str(subject)),
+    return sign_proof(load_proof_key(path), kind="voice", action_id=proof_identifier(request_id), subject_id=proof_subject(entities, env),
                       operator=proof_identifier(operator or "unnamed"), approved_at_ms=approved, expires_at_ms=approved + PROOF_VALIDITY_MS,
                       approval_id=secrets.token_hex(16))
 
@@ -852,10 +876,19 @@ def confirm_pending_action(confirmation_token: object, *, subject: object = None
             status="invalid", request_id=None, intent_name=None, entities=None, age_seconds=None,
             reason=already_used,
         )
+    proof = confirmation_proof_of(pending.request_id, dict(pending.entities), pending.subject, now)
+    # a stop is never held back: the cognitive node is only asked about what would start something
+    if pending.intent_name != INTENT_STOP:
+        refusal = cognitive_node_refusal(pending.request_id, dict(pending.entities), proof)
+        if refusal is not None:
+            return ConfirmationResult(
+                status="invalid", request_id=pending.request_id, intent_name=pending.intent_name, entities=dict(pending.entities), age_seconds=age,
+                reason=f"{refusal} - nothing was confirmed; repeat the request",
+            )
     return ConfirmationResult(
         status="confirmed", request_id=pending.request_id, intent_name=pending.intent_name,
         entities=dict(pending.entities), age_seconds=age,
         reason=f"{pending.intent_name} confirmed {age:.1f}s after being requested - execution still requires the authenticated primary control",
         subject=pending.subject, confirmed_at=now.astimezone(timezone.utc).isoformat(), nonce=pending.nonce,
-        proof=confirmation_proof_of(pending.request_id, dict(pending.entities), pending.subject, now),
+        proof=proof,
     )

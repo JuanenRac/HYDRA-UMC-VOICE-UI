@@ -192,3 +192,5 @@ The audit log is on by default (`audit.enabled`, switch it off with `"enabled": 
 ## Confirmation proof
 
 With `HYDRA_UMC_VOICE_UI_PROOF_KEY_FILE` (off by default; one line of at least 32 characters, mode 600) a confirmed result also carries `confirmationProof`, the `ConfirmationProof` of HYDRA-UMC-SDK: `kind` `voice`, `action_id` the request id, `subject_id` the robot the request names, else `HYDRA_UMC_VOICE_UI_PROOF_SUBJECT` (default `installation`), valid for 30 seconds. Give the same key file to the layer that acts.
+
+With `HYDRA_UMC_VOICE_UI_COGNITIVE_URL` (off by default; `HYDRA_UMC_VOICE_UI_COGNITIVE_TOKEN_FILE` holds the bearer token) a confirmed request that is not a stop is first asked of HYDRA-UMC-COGNITIVE-NODE (`POST /autonomy/evaluate`): `source` `voice-ui`, `level` `execute_with_confirmation`, `actionId` the request id, `subjectId` the robot named (else the installation, as in the proof) and the `confirmationProof` when a proof key is set. Only `allow` keeps it `confirmed`; any other answer, or none, makes it `invalid` and the request has to be repeated. The autonomy file of the node must give `voice-ui` the level `execute_with_confirmation`.
