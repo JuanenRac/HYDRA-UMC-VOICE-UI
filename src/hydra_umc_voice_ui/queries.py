@@ -76,7 +76,7 @@ class DocsQaClient:
         if not self.config.token_file:
             return ""
         try:
-            return Path(self.config.token_file).read_text(encoding="utf-8").strip()
+            return Path(self.config.token_file).read_text(encoding="utf-8-sig").strip()
         except (OSError, UnicodeDecodeError):
             return ""
 

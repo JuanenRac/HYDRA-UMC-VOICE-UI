@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **Token and password files saved with a byte order mark are read:** a file written by an editor of Windows as "UTF-8 with BOM" kept the mark in front of the secret, so the credential was refused or could not be sent in a header. The mark is dropped now; a file in another encoding (UTF-16) is refused with a clear message.
 - **A confirmed spoken request can be asked of the cognitive node:** with `HYDRA_UMC_VOICE_UI_COGNITIVE_URL` (off by default) a confirmation is honoured only when HYDRA-UMC-COGNITIVE-NODE allows it. The question carries the named robot, or the installation, as `subjectId` and the `confirmationProof` when a proof key is set. A stop is never held back.
 - **A confirmed spoken request can carry the shared proof:** with `HYDRA_UMC_VOICE_UI_PROOF_KEY_FILE` a confirmed result has `confirmationProof` (the `ConfirmationProof` of the SDK: the request id, the robot it names or the installation, who confirmed, 30 seconds, an identity for one use). Off without the key file.
 
