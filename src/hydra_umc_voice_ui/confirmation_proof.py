@@ -137,7 +137,7 @@ def load_node_token(path: str) -> str:
     if not path:
         return ""
     try:
-        token = Path(path).read_text(encoding="utf-8").strip()
+        token = Path(path).read_text(encoding="utf-8-sig").strip()
     except (OSError, UnicodeDecodeError) as error:
         raise ValueError(f"the token file of the cognitive node cannot be read: {type(error).__name__}") from error
     if len(token) < 16 or not token.isascii() or not token.isprintable():
